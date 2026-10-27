@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4a453d"/>
+      <stop offset="100%" stop-color="#10141a"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1200" fill="url(#g)"/>
+  <circle cx="680" cy="220" r="140" fill="#ebe4d6" fill-opacity="0.1"/>
+  <circle cx="180" cy="980" r="200" fill="#ebe4d6" fill-opacity="0.08"/>
+  <text x="60" y="90" fill="#ebe4d6" font-size="22" font-family="Georgia, serif" opacity="0.7">Exemplo · mesmo casal</text>
+  <text x="60" y="560" fill="#ebe4d6" font-size="48" font-family="Georgia, serif">Papel artesanal</text>
+  <text x="60" y="620" fill="#ebe4d6" font-size="24" font-family="Georgia, serif" opacity="0.85">Cena compartilhada de comparação</text>
+  <rect x="60" y="700" width="320" height="220" rx="4" fill="#ebe4d6" fill-opacity="0.12" stroke="#ebe4d6" stroke-opacity="0.35"/>
+  <circle cx="170" cy="800" r="42" fill="#ebe4d6" fill-opacity="0.25"/>
+  <circle cx="250" cy="800" r="42" fill="#ebe4d6" fill-opacity="0.2"/>
+</svg>

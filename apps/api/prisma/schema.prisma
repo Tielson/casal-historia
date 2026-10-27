@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Draft {
+  id                 String    @id @default(cuid())
+  token              String    @unique @default(cuid())
+  step               String    @default("occasion")
+  status             String    @default("draft")
+  occasion           String?
+  nameA              String?
+  nameB              String?
+  photoAKey          String?
+  photoBKey          String?
+  photoTogetherKey   String?
+  startDate          String?
+  photoConsent       Boolean   @default(false)
+  styleId            String?
+  memoriesAnswers    Json?
+  dedication         String?
+  email              String?
+  previewRegenCount  Int       @default(0)
+  previewApproved    Boolean   @default(false)
+  clientId           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  preview            Preview?
+  order              Order?
+  events             FunnelEvent[]
+}
+
+model Preview {
+  id         String   @id @default(cuid())
+  draftId    String   @unique
+  draft      Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  stage      String   @default("queued")
+  coverKey   String?
+  pageKey    String?
+  coverText  String?
+  pageText   String?
+  error      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Order {
+  id                String    @id @default(cuid())
+  draftId           String    @unique
+  draft             Draft     @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  status            String    @default("pending_payment")
+  amountCents       Int
+  currency          String    @default("brl")
+  email             String?
+  stripeSessionId   String?   @unique
+  stripePaymentId   String?   @unique
+  productionStage   String?
+  productionError   String?
+  reprocessCount    Int       @default(0)
+  pdfKey            String?
+  manageToken       String    @unique @default(cuid())
+  giftToken         String    @unique @default(cuid())
+  giftRevoked       Boolean   @default(false)
+  notes             String?
+  paidAt            DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  payments          Payment[]
+  jobs              GenerationJob[]
+}
+
+model Payment {
+  id                    String   @id @default(cuid())
+  orderId               String
+  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stripeEventId         String   @unique
+  stripeSessionId       String?
+  amountCents           Int
+  currency              String
+  status                String
+  rawType               String
+  createdAt             DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model GenerationJob {
+  id        String   @id @default(cuid())
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  draftId   String?
+  kind      String   // preview | production | pdf | email
+  stage     String   @default("queued")
+  attempts  Int      @default(0)
+  error     String?
+  meta      Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([draftId])
+  @@index([orderId])
+}
+
+model FunnelEvent {
+  id        String   @id @default(cuid())
+  name      String
+  draftId   String?
+  draft     Draft?   @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  orderId   String?
+  clientId  String?
+  path      String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([name])
+  @@index([createdAt])
+}

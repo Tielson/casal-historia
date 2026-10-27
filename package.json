@@ -1,0 +1,25 @@
+{
+  "name": "entre-nos",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @entre-nos/web --filter @entre-nos/api dev",
+    "dev:web": "pnpm --filter @entre-nos/web dev",
+    "dev:api": "pnpm --filter @entre-nos/api dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @entre-nos/api prisma:generate",
+    "db:migrate": "pnpm --filter @entre-nos/api prisma:migrate",
+    "db:push": "pnpm --filter @entre-nos/api prisma:push"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "esbuild",
+      "msgpackr-extract",
+      "unrs-resolver"
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@entre-nos/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node ../../scripts/dev-api.mjs",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "start:dev": "pnpm build && node dist/main.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:push": "prisma db push",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.787.0",
+    "@aws-sdk/s3-request-presigner": "^3.787.0",
+    "@entre-nos/shared": "workspace:*",
+    "@nestjs/common": "^11.0.12",
+    "@nestjs/core": "^11.0.12",
+    "@nestjs/platform-express": "^11.0.12",
+    "@prisma/client": "^6.5.0",
+    "bullmq": "^5.44.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.3.0",
+    "ioredis": "^5.6.0",
+    "multer": "^1.4.5-lts.2",
+    "pdfkit": "^0.16.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "sharp": "^0.33.5",
+    "stripe": "^17.7.0",
+    "uuid": "^11.1.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.10",
+    "@types/pdfkit": "^0.13.9",
+    "prisma": "^6.5.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

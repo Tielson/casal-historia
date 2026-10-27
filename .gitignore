@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+.env
+.env.local
+*.log
+coverage
+.turbo
+uploads
+.tmp
+.pdf-cache
+.DS_Store
+.local-storage
+apps/api/.local-storage
+apps/web/.env.local
+apps/api/.env
