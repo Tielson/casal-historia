@@ -14,3 +14,5 @@ uploads
 apps/api/.local-storage
 apps/web/.env.local
 apps/api/.env
+dump.rdb
+*.rdb
