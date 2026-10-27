@@ -9,7 +9,8 @@
     "build": "pnpm -r build",
     "db:generate": "pnpm --filter @entre-nos/api prisma:generate",
     "db:migrate": "pnpm --filter @entre-nos/api prisma:migrate",
-    "db:push": "pnpm --filter @entre-nos/api prisma:push"
+    "db:push": "pnpm --filter @entre-nos/api prisma:push",
+    "prepare": "pnpm --filter @entre-nos/shared build"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
