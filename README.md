@@ -57,3 +57,13 @@ Landing → Ocasião → Casal/fotos → Estilo → Lembranças → Prévia → 
 ## Docs do produto
 
 No checkout deste VM também em `/cursor/stores/self/docs/` (architecture, env, funnel-events, paper-frames-brief, support-policies).
+
+## GitHub
+
+This VM had no `gh` credentials. To publish:
+
+```bash
+gh auth login
+gh repo create entrenos-mvp --private --source=. --remote=origin --push
+gh pr create --base main --head cursor/entre-nos-mvp-8678 --title "Entre Nós MVP" --body "MVP monorepo: landing, funnel, preview, Stripe, admin."
+```
