@@ -45,6 +45,6 @@ docker-compose.yml  postgres + redis + minio
 ## Fallbacks
 
 - Redis down → in-memory job runner
-- MinIO down → `.local-storage` + `/uploads/local?key=`
+- R2/MinIO down → `.local-storage` + `/uploads/local?key=` (photos + PDFs otherwise via private R2 + signed GET)
 - No Stripe keys → mock checkout URL + `POST /payments/mock-pay/:orderId`
 - `MOCK_GENERATION=true` → placeholder images + templated copy

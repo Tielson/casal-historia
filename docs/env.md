@@ -24,16 +24,17 @@ Copy from repo `.env.example`.
 | `STRIPE_CURRENCY` | `brl` |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Optional client display only |
 
-## Storage
+## Storage (Cloudflare R2 preferred; MinIO ok locally)
 
 | Key | Purpose |
 |-----|---------|
-| `S3_ENDPOINT` | MinIO/S3 endpoint |
-| `S3_REGION` | Region |
-| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Credentials |
-| `S3_BUCKET` | Bucket name |
-| `S3_FORCE_PATH_STYLE` | `true` for MinIO |
-| `S3_PUBLIC_BASE_URL` | Optional public CDN base |
+| `S3_ENDPOINT` | R2: `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` — or MinIO `http://localhost:9000` |
+| `S3_REGION` | `auto` for R2; `us-east-1` for MinIO |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | R2 API token access key / secret (never commit) |
+| `S3_BUCKET` | Bucket name (prod: `nos-dois`) |
+| `S3_FORCE_PATH_STYLE` | `true` recommended for R2 and MinIO |
+| `S3_PUBLIC_BASE_URL` | Leave empty for private objects + signed GETs; set only with a public CDN |
+| `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` | Optional bucket admin; local `.env` only |
 
 ## Generation / email
 
