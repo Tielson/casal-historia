@@ -6,7 +6,8 @@ dist
 *.log
 coverage
 .turbo
-uploads
+# Local upload/storage dumps (not the Nest uploads module under apps/api/src/uploads)
+/uploads/
 .tmp
 .pdf-cache
 .DS_Store
@@ -16,3 +17,7 @@ apps/web/.env.local
 apps/api/.env
 dump.rdb
 *.rdb
+*.db
+*.db-journal
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal

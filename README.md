@@ -1,37 +1,57 @@
 # Entre Nós — MVP
 
-Livro digital personalizado para casais (12 páginas, R$ 49,90). Monorepo com Next.js (web) + NestJS (api) + Prisma/PostgreSQL + BullMQ/Redis + storage S3-compatible.
+Livro digital personalizado para casais (12 páginas, R$ 49,90). Monorepo com Next.js (web) + NestJS (api) + Prisma/Turso (libSQL) + BullMQ/Redis + storage S3-compatible.
 
 ## Stack
 
 - `apps/web` — Next.js App Router, TypeScript, Tailwind, React Hook Form + Zod, React Query, Axios
-- `apps/api` — NestJS, Prisma, PostgreSQL, BullMQ + Redis, Stripe Checkout + webhook, MinIO/S3 (com fallback local)
+- `apps/api` — NestJS, Prisma + Turso/libSQL (`@prisma/adapter-libsql`), BullMQ + Redis, Stripe Checkout + webhook, MinIO/S3 (com fallback local)
 - `packages/shared` — constantes, schemas Zod, eventos
-- `docker-compose.yml` — Postgres, Redis, MinIO
+- `docker-compose.yml` — Redis, MinIO (banco é Turso; Postgres removido)
 
 ## Setup rápido
 
 ```bash
-# 1) Infra (recomendado)
+# 1) Infra auxiliar (Redis + MinIO)
 docker compose up -d
 
 # 2) Env
 cp .env.example .env
 cp .env.example apps/api/.env
+# Preencha TURSO_DATABASE_URL + TURSO_AUTH_TOKEN (ver abaixo)
 # Ajuste ADMIN_TOKEN, Stripe, Meta etc. quando tiver
 
 # 3) Dependências
 pnpm install
 
-# 4) Banco
+# 4) Banco (Turso remoto ou SQLite local)
 pnpm db:push
+# ou: aplicar migration SQL no Turso — ver docs/turso.md
 
 # 5) Rodar
 pnpm dev:api   # http://localhost:3001
 pnpm dev:web   # http://localhost:3000
 ```
 
-Sem Docker: Postgres em `DATABASE_URL` e Redis em `REDIS_URL`. Se Redis/MinIO estiverem offline, a API usa fila em memória e storage em disco (`.local-storage`).
+### Turso
+
+```bash
+# CLI: https://docs.turso.tech/cli/installation
+turso auth login
+turso db create casal-historia
+turso db show --url casal-historia          # → TURSO_DATABASE_URL
+turso db tokens create casal-historia       # → TURSO_AUTH_TOKEN
+
+# Schema: migrate gera SQL local; aplicar no Turso:
+pnpm --filter @entre-nos/api exec prisma migrate diff \
+  --from-empty --to-schema-datamodel prisma/schema.prisma --script \
+  > apps/api/prisma/migrations/0001_init/migration.sql
+turso db shell casal-historia < apps/api/prisma/migrations/0001_init/migration.sql
+```
+
+Sem Turso: use `DATABASE_URL=file:./prisma/dev.db` e `pnpm db:push` (SQLite local). A API usa `TURSO_DATABASE_URL` quando definido; senão cai no arquivo local.
+
+Redis/MinIO offline → fila em memória e storage em disco (`.local-storage`).
 
 ## Mock vs real
 
@@ -56,11 +76,9 @@ Landing → Ocasião → Casal/fotos → Estilo → Lembranças → Prévia → 
 
 ## Docs do produto
 
-No checkout deste VM também em `/cursor/stores/self/docs/` (architecture, env, funnel-events, paper-frames-brief, support-policies).
+No checkout deste VM também em `/cursor/stores/self/docs/` (architecture, env, funnel-events, paper-frames-brief, support-policies, turso-setup).
 
 ## GitHub
-
-This VM had no `gh` credentials. To publish:
 
 ```bash
 gh auth login

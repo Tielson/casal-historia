@@ -17,7 +17,11 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
   webUrl: process.env.WEB_URL ?? 'http://localhost:3000',
   apiUrl: process.env.API_URL ?? 'http://localhost:3001',
-  databaseUrl: process.env.DATABASE_URL ?? '',
+  /** Local SQLite file URL for `prisma migrate` / offline (e.g. file:./prisma/dev.db) */
+  databaseUrl: process.env.DATABASE_URL ?? 'file:./prisma/dev.db',
+  /** Turso/libSQL remote URL (libsql://… or https://…). Preferred at runtime. */
+  tursoDatabaseUrl: process.env.TURSO_DATABASE_URL ?? '',
+  tursoAuthToken: sanitizeSecret(process.env.TURSO_AUTH_TOKEN),
   redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
   adminToken: process.env.ADMIN_TOKEN ?? 'change-me-admin-token',
   draftCookieName: process.env.DRAFT_COOKIE_NAME ?? 'en_draft',
