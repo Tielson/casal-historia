@@ -30,9 +30,11 @@ pnpm db:push
 # ou: aplicar migration SQL no Turso — ver docs/turso.md
 
 # 5) Rodar
-pnpm dev:api   # http://localhost:3001
+pnpm dev:api   # http://localhost:4000
 pnpm dev:web   # http://localhost:3000
 ```
+
+API defaults to **4000** (override with `PORT`) so it never fights Next for 3000/3001. Redis offline → in-memory job runner is fine for local.
 
 ### Turso
 

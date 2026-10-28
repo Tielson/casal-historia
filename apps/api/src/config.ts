@@ -13,10 +13,10 @@ function sanitizeSecret(value?: string) {
 }
 
 export const config = {
-  port: Number(process.env.PORT ?? 3001),
+  port: Number(process.env.PORT ?? 4000),
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
   webUrl: process.env.WEB_URL ?? 'http://localhost:3000',
-  apiUrl: process.env.API_URL ?? 'http://localhost:3001',
+  apiUrl: process.env.API_URL ?? 'http://localhost:4000',
   /** Local SQLite file URL for `prisma migrate` / offline (e.g. file:./prisma/dev.db) */
   databaseUrl: process.env.DATABASE_URL ?? 'file:./prisma/dev.db',
   /** Turso/libSQL remote URL (libsql://… or https://…). Preferred at runtime. */

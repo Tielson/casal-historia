@@ -7,10 +7,10 @@ Copy from repo `.env.example`.
 | Key | Where | Purpose |
 |-----|-------|---------|
 | `DATABASE_URL` | API | PostgreSQL connection |
-| `REDIS_URL` | API | BullMQ (optional; falls back to memory) |
-| `PORT` | API | Default `3001` |
-| `CORS_ORIGIN` / `WEB_URL` / `API_URL` | API | Origins and absolute links |
-| `NEXT_PUBLIC_API_URL` | Web | Browser → API |
+| `REDIS_URL` | API | BullMQ (optional; falls back to in-memory if Redis refused) |
+| `PORT` | API | Default `4000` (web stays on `3000`) |
+| `CORS_ORIGIN` / `WEB_URL` / `API_URL` | API | Origins and absolute links (`API_URL` → `http://localhost:4000`) |
+| `NEXT_PUBLIC_API_URL` | Web | Browser → API (`http://localhost:4000`) |
 | `ADMIN_TOKEN` | API | Admin panel + `/admin/*` |
 | `DRAFT_COOKIE_NAME` | API | Default `en_draft` |
 
