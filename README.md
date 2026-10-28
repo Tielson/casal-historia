@@ -5,20 +5,21 @@ Livro digital personalizado para casais (12 páginas, R$ 49,90). Monorepo com Ne
 ## Stack
 
 - `apps/web` — Next.js App Router, TypeScript, Tailwind, React Hook Form + Zod, React Query, Axios
-- `apps/api` — NestJS, Prisma + Turso/libSQL (`@prisma/adapter-libsql`), BullMQ + Redis, Stripe Checkout + webhook, MinIO/S3 (com fallback local)
+- `apps/api` — NestJS, Prisma + Turso/libSQL (`@prisma/adapter-libsql`), BullMQ + Redis, Stripe Checkout + webhook, Cloudflare R2 / MinIO (S3-compatible, fallback local)
 - `packages/shared` — constantes, schemas Zod, eventos
-- `docker-compose.yml` — Redis, MinIO (banco é Turso; Postgres removido)
+- `docker-compose.yml` — Redis, MinIO opcional (banco é Turso; storage preferido é R2)
 
 ## Setup rápido
 
 ```bash
-# 1) Infra auxiliar (Redis + MinIO)
+# 1) Infra auxiliar (Redis; MinIO só se não usar R2)
 docker compose up -d
 
 # 2) Env
 cp .env.example .env
 cp .env.example apps/api/.env
 # Preencha TURSO_DATABASE_URL + TURSO_AUTH_TOKEN (ver abaixo)
+# Preencha S3_* para Cloudflare R2 (ver docs/r2.md) ou deixe MinIO local
 # Ajuste ADMIN_TOKEN, Stripe, Meta etc. quando tiver
 
 # 3) Dependências
@@ -51,7 +52,7 @@ turso db shell casal-historia < apps/api/prisma/migrations/0001_init/migration.s
 
 Sem Turso: use `DATABASE_URL=file:./prisma/dev.db` e `pnpm db:push` (SQLite local). A API usa `TURSO_DATABASE_URL` quando definido; senão cai no arquivo local.
 
-Redis/MinIO offline → fila em memória e storage em disco (`.local-storage`).
+Redis offline → fila em memória. R2/MinIO offline → storage em disco (`.local-storage`).
 
 ## Mock vs real
 
@@ -61,7 +62,7 @@ Redis/MinIO offline → fila em memória e storage em disco (`.local-storage`).
 | Stripe | Sem `STRIPE_SECRET_KEY` → checkout mock + `POST /payments/mock-pay/:orderId` | Checkout Session + webhook com assinatura |
 | E-mail | Log no console | `RESEND_API_KEY` |
 | Meta Pixel/CAPI | Stub em console + `POST /meta/capi` | `NEXT_PUBLIC_META_PIXEL_ID`, `META_PIXEL_ID`, `META_ACCESS_TOKEN`, `META_CAPI_ENABLED=true` |
-| Storage | Pasta local se MinIO cair | MinIO/S3 via env `S3_*` |
+| Storage | Pasta local se R2/MinIO cair | Cloudflare R2 (ou MinIO) via env `S3_*`; objetos privados + signed GET |
 
 Preço **sempre** no servidor (`STRIPE_PRICE_CENTS=4990`). Webhook valida assinatura, valor, moeda e status; produção é idempotente.
 
