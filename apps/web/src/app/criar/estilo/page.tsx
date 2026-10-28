@@ -9,6 +9,15 @@ import { FunnelShell } from '@/components/FunnelShell';
 import { ensureDraft, patchDraft } from '@/lib/api';
 import { trackFunnel } from '@/lib/meta';
 
+const STYLE_PREVIEW: Record<string, string> = {
+  aquarela: '/cute/cute-couple-cover.jpg',
+  editorial: '/styles/editorial.svg',
+  linha: '/styles/linha.svg',
+  filme: '/cute/cute-rain-walk.jpg',
+  noturno: '/styles/noturno.svg',
+  papel: '/styles/papel.svg',
+};
+
 export default function StylePage() {
   const router = useRouter();
   const draftQuery = useQuery({ queryKey: ['draft'], queryFn: ensureDraft });
@@ -39,7 +48,7 @@ export default function StylePage() {
     <FunnelShell
       step={3}
       title="Escolham o estilo"
-      subtitle="As imagens comparam o mesmo casal na mesma cena. Exemplos ilustrativos."
+      subtitle="Exemplos ilustrativos — pastéis, corações e doodles. Não são o livro final."
     >
       <form className="space-y-5" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -49,7 +58,7 @@ export default function StylePage() {
               <label
                 key={style.id}
                 className={`cursor-pointer overflow-hidden rounded-sm border ${
-                  selected ? 'border-champagne' : 'border-white/15'
+                  selected ? 'border-blush-soft' : 'border-white/15'
                 }`}
               >
                 <input
@@ -61,7 +70,7 @@ export default function StylePage() {
                 <div className="relative aspect-[3/4]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/styles/${style.id}.svg`}
+                    src={STYLE_PREVIEW[style.id] ?? `/styles/${style.id}.svg`}
                     alt={`Exemplo ${style.name}`}
                     className="h-full w-full object-cover"
                   />
