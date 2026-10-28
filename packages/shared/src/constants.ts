@@ -20,32 +20,32 @@ export const STYLES = [
   {
     id: 'aquarela',
     name: 'Aquarela suave',
-    description: 'Traços leves, cores diluídas, clima de caderno de viagem.',
+    description: 'Manchas leves, pastéis e corações diluídos no papel.',
   },
   {
     id: 'editorial',
     name: 'Editorial íntimo',
-    description: 'Luz natural, composição fotográfica, tipografia limpa.',
+    description: 'Luz macia, tipografia carinhosa, clima de revista fofa.',
   },
   {
     id: 'linha',
     name: 'Linha contemporânea',
-    description: 'Ilustração de contorno, contraste alto, ar moderno.',
+    description: 'Contornos limpos com doodles e laços delicados.',
   },
   {
     id: 'filme',
     name: 'Filme antigo',
-    description: 'Grão suave, tons quentes, sensação de revelação.',
+    description: 'Tons quentes, grão suave e chuva de corações.',
   },
   {
     id: 'noturno',
     name: 'Noturno sereno',
-    description: 'Azuis profundos, luz de janela, quietude.',
+    description: 'Luz de lanterna, lilás suave e corações no céu.',
   },
   {
     id: 'papel',
     name: 'Papel artesanal',
-    description: 'Textura de papel, carvão e aquarela seca.',
+    description: 'Textura de caderno com laços, carimbo e corações.',
   },
 ] as const;
 
