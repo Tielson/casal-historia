@@ -1,21 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: entrenos
-      POSTGRES_PASSWORD: entrenos
-      POSTGRES_DB: entrenos
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U entrenos -d entrenos"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -62,6 +45,5 @@ services:
       "
 
 volumes:
-  postgres_data:
   redis_data:
   minio_data:

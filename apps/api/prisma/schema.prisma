@@ -2,89 +2,127 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// SQLite dialect for Turso/libSQL. Runtime connects via @prisma/adapter-libsql
+// (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN). DATABASE_URL is used for local
+// migrate/db push against a file SQLite DB.
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model Draft {
-  id                 String    @id @default(cuid())
-  token              String    @unique @default(cuid())
-  step               String    @default("occasion")
-  status             String    @default("draft")
-  occasion           String?
-  nameA              String?
-  nameB              String?
-  photoAKey          String?
-  photoBKey          String?
-  photoTogetherKey   String?
-  startDate          String?
-  photoConsent       Boolean   @default(false)
-  styleId            String?
-  memoriesAnswers    Json?
-  dedication         String?
-  email              String?
-  previewRegenCount  Int       @default(0)
-  previewApproved    Boolean   @default(false)
-  clientId           String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  preview            Preview?
-  order              Order?
-  events             FunnelEvent[]
+  id                String   @id @default(cuid())
+  token             String   @unique @default(cuid())
+  step              String   @default("occasion")
+  status            String   @default("draft")
+  occasion          String?
+  nameA             String?
+  nameB             String?
+  /// Denormalized storage keys (kept for current funnel code paths)
+  photoAKey         String?
+  photoBKey         String?
+  photoTogetherKey  String?
+  startDate         String?
+  photoConsent      Boolean  @default(false)
+  styleId           String?
+  memoriesAnswers   Json?
+  dedication        String?
+  email             String?
+  previewRegenCount Int      @default(0)
+  previewApproved   Boolean  @default(false)
+  clientId          String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  preview           Preview?
+  order             Order?
+  events            FunnelEvent[]
+  photos            Photo[]
+}
+
+/// Normalized photo assets for a draft (person_a | person_b | together)
+model Photo {
+  id         String   @id @default(cuid())
+  draftId    String
+  draft      Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  role       String
+  storageKey String
+  mimeType   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([draftId, role])
+  @@index([draftId])
 }
 
 model Preview {
-  id         String   @id @default(cuid())
-  draftId    String   @unique
-  draft      Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
-  stage      String   @default("queued")
-  coverKey   String?
-  pageKey    String?
-  coverText  String?
-  pageText   String?
-  error      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(cuid())
+  draftId   String   @unique
+  draft     Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  stage     String   @default("queued")
+  coverKey  String?
+  pageKey   String?
+  coverText String?
+  pageText  String?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Order {
-  id                String    @id @default(cuid())
-  draftId           String    @unique
-  draft             Draft     @relation(fields: [draftId], references: [id], onDelete: Cascade)
-  status            String    @default("pending_payment")
-  amountCents       Int
-  currency          String    @default("brl")
-  email             String?
-  stripeSessionId   String?   @unique
-  stripePaymentId   String?   @unique
-  productionStage   String?
-  productionError   String?
-  reprocessCount    Int       @default(0)
-  pdfKey            String?
-  manageToken       String    @unique @default(cuid())
-  giftToken         String    @unique @default(cuid())
-  giftRevoked       Boolean   @default(false)
-  notes             String?
-  paidAt            DateTime?
-  deliveredAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  payments          Payment[]
-  jobs              GenerationJob[]
+  id              String    @id @default(cuid())
+  draftId         String    @unique
+  draft           Draft     @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  status          String    @default("pending_payment")
+  amountCents     Int
+  currency        String    @default("brl")
+  email           String?
+  stripeSessionId String?   @unique
+  stripePaymentId String?   @unique
+  productionStage String?
+  productionError String?
+  reprocessCount  Int       @default(0)
+  /// Denormalized PDF key (kept for current delivery code paths)
+  pdfKey          String?
+  manageToken     String    @unique @default(cuid())
+  giftToken       String    @unique @default(cuid())
+  giftRevoked     Boolean   @default(false)
+  notes           String?
+  paidAt          DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  payments        Payment[]
+  jobs            GenerationJob[]
+  deliverables    Deliverable[]
+}
+
+/// Order outputs (pdf | cover_image | page_image)
+model Deliverable {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind       String
+  storageKey String
+  pageIndex  Int?
+  mimeType   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([orderId, kind])
 }
 
 model Payment {
-  id                    String   @id @default(cuid())
-  orderId               String
-  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  stripeEventId         String   @unique
-  stripeSessionId       String?
-  amountCents           Int
-  currency              String
-  status                String
-  rawType               String
-  createdAt             DateTime @default(now())
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stripeEventId   String   @unique
+  stripeSessionId String?
+  amountCents     Int
+  currency        String
+  status          String
+  rawType         String
+  createdAt       DateTime @default(now())
 
   @@index([orderId])
 }
@@ -94,7 +132,7 @@ model GenerationJob {
   orderId   String?
   order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   draftId   String?
-  kind      String   // preview | production | pdf | email
+  kind      String
   stage     String   @default("queued")
   attempts  Int      @default(0)
   error     String?

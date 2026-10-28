@@ -23,11 +23,12 @@ export class AdminService {
   async list(q?: string) {
     const where: Prisma.OrderWhereInput = q
       ? {
+          // SQLite/libSQL has no case-insensitive `mode` filter
           OR: [
             { id: { contains: q } },
-            { email: { contains: q, mode: 'insensitive' } },
-            { draft: { nameA: { contains: q, mode: 'insensitive' } } },
-            { draft: { nameB: { contains: q, mode: 'insensitive' } } },
+            { email: { contains: q } },
+            { draft: { nameA: { contains: q } } },
+            { draft: { nameB: { contains: q } } },
             { stripeSessionId: { contains: q } },
           ],
         }
