@@ -6,8 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { z } from 'zod';
-import { OCCASIONS, STYLES, PRICE_LABEL } from '@entre-nos/shared';
+import { OCCASIONS, STORY_MODES, STYLES, PRICE_LABEL } from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
 import { api, ensureDraft } from '@/lib/api';
 import { trackFunnel, trackMeta } from '@/lib/meta';
@@ -17,6 +18,16 @@ const emailSchema = z.object({
 });
 
 type EmailForm = z.infer<typeof emailSchema>;
+
+const PAID_STATUSES = new Set(['paid', 'producing', 'delivered']);
+
+function errorMessage(err: unknown) {
+  if (axios.isAxiosError(err)) {
+    const message = (err.response?.data as { message?: string } | undefined)?.message;
+    if (message) return message;
+  }
+  return 'Não foi possível abrir o pagamento.';
+}
 
 export default function ReviewPage() {
   const params = useSearchParams();
@@ -64,6 +75,8 @@ export default function ReviewPage() {
 
   const occasion = OCCASIONS.find((o) => o.id === draft?.occasion);
   const style = STYLES.find((s) => s.id === draft?.styleId);
+  const storyMode = STORY_MODES.find((mode) => mode.id === draft?.storyMode);
+  const alreadyPaid = PAID_STATUSES.has(draft?.status ?? '') && Boolean(draft?.manageToken);
 
   return (
     <FunnelShell
@@ -85,6 +98,7 @@ export default function ReviewPage() {
           href="/criar/casal"
         />
         <Row label="Estilo" value={style?.name ?? '—'} href="/criar/estilo" />
+        <Row label="História" value={storyMode?.name ?? 'Inspirada em nós'} href="/criar/lembrancas" />
         <Row
           label="Lembranças"
           value={
@@ -102,39 +116,56 @@ export default function ReviewPage() {
         </div>
       </div>
 
-      <form
-        className="mt-8 space-y-4"
-        onSubmit={form.handleSubmit((v) => pay.mutate(v))}
-      >
-        <div>
-          <label className="text-sm">E-mail para receber o livro</label>
-          <input
-            type="email"
-            className="mt-1 w-full rounded-md border border-white/15 bg-ink-soft px-3 py-2"
-            {...form.register('email')}
-          />
-          {form.formState.errors.email ? (
-            <p className="mt-1 text-xs text-[var(--danger)]">
-              {form.formState.errors.email.message}
+      {alreadyPaid ? (
+        <div className="mt-8 space-y-3">
+          <p className="text-sm text-mist">
+            Este presente já foi pago. O livro continua no link de gerenciamento.
+          </p>
+          <Link
+            href={`/livro/${draft?.manageToken}`}
+            className="inline-flex rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink"
+          >
+            Abrir nosso livro
+          </Link>
+        </div>
+      ) : (
+        <form
+          className="mt-8 space-y-4"
+          onSubmit={form.handleSubmit((v) => pay.mutate(v))}
+        >
+          <div>
+            <label className="text-sm">E-mail para receber o livro</label>
+            <input
+              type="email"
+              className="mt-1 w-full rounded-md border border-white/15 bg-ink-soft px-3 py-2"
+              {...form.register('email')}
+            />
+            {form.formState.errors.email ? (
+              <p className="mt-1 text-xs text-[var(--danger)]">
+                {form.formState.errors.email.message}
+              </p>
+            ) : null}
+          </div>
+          {pay.isError ? (
+            <p className="text-sm text-[var(--danger)]">{errorMessage(pay.error)}</p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={pay.isPending || !draft?.previewApproved}
+            className="rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink disabled:opacity-50"
+          >
+            Continuar para pagamento
+          </button>
+          {!draft?.previewApproved ? (
+            <p className="text-xs text-mist-dim">
+              Aprove a prévia antes de pagar.{' '}
+              <Link href="/criar/previa" className="underline">
+                Ir para prévia
+              </Link>
             </p>
           ) : null}
-        </div>
-        <button
-          type="submit"
-          disabled={pay.isPending || !draft?.previewApproved}
-          className="rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink disabled:opacity-50"
-        >
-          Continuar para pagamento
-        </button>
-        {!draft?.previewApproved ? (
-          <p className="text-xs text-mist-dim">
-            Aprove a prévia antes de pagar.{' '}
-            <Link href="/criar/previa" className="underline">
-              Ir para prévia
-            </Link>
-          </p>
-        ) : null}
-      </form>
+        </form>
+      )}
     </FunnelShell>
   );
 }

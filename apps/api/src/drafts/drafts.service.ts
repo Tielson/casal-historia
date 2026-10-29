@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { draftPatchSchema, type DraftPatch } from '@entre-nos/shared';
+import { draftPatchSchema, funnelStepRank, keepFurthestStep, type DraftPatch } from '@entre-nos/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+
+const PAID_STATUSES = new Set(['paid', 'producing', 'delivered', 'needs_review']);
 
 @Injectable()
 export class DraftsService {
@@ -33,11 +35,28 @@ export class DraftsService {
   async patch(token: string, body: unknown) {
     const parsed = draftPatchSchema.parse(body) as DraftPatch;
     const draft = await this.findByToken(token);
+    const storyChanged = this.storyChanged(draft, parsed);
+    const paid =
+      PAID_STATUSES.has(draft.status) ||
+      (draft.order ? PAID_STATUSES.has(draft.order.status) : false);
+    if (storyChanged && paid) {
+      throw new BadRequestException(
+        'Este livro já foi pago. As etapas anteriores não podem mais ser alteradas.',
+      );
+    }
 
+    const invalidatePreview = storyChanged && Boolean(draft.preview);
     const data: Prisma.DraftUpdateInput = {};
-    if (parsed.step) data.step = parsed.step;
+    if (parsed.step) data.step = keepFurthestStep(draft.step, parsed.step);
+    if (invalidatePreview) {
+      data.previewApproved = false;
+      if (funnelStepRank(draft.step) >= funnelStepRank('preview') && draft.status !== 'paid') {
+        data.status = 'draft';
+      }
+    }
     if (parsed.occasion) data.occasion = parsed.occasion;
     if (parsed.styleId) data.styleId = parsed.styleId;
+    if (parsed.filmFinish !== undefined) data.filmFinish = parsed.filmFinish;
     if (parsed.email !== undefined) data.email = parsed.email;
     if (parsed.couple) {
       if (parsed.couple.nameA !== undefined) data.nameA = parsed.couple.nameA;
@@ -59,13 +78,71 @@ export class DraftsService {
       if (parsed.memories.dedication !== undefined) {
         data.dedication = parsed.memories.dedication ?? null;
       }
+      if (parsed.memories.storyMode) data.storyMode = parsed.memories.storyMode;
     }
 
+    if (invalidatePreview) {
+      await this.prisma.preview.delete({ where: { draftId: draft.id } });
+    }
     return this.prisma.draft.update({
       where: { id: draft.id },
       data,
       include: { preview: true, order: true },
     });
+  }
+
+  private storyChanged(
+    draft: Awaited<ReturnType<DraftsService['findByToken']>>,
+    parsed: DraftPatch,
+  ) {
+    if (parsed.occasion && parsed.occasion !== draft.occasion) return true;
+    if (parsed.styleId && parsed.styleId !== draft.styleId) return true;
+    if (parsed.filmFinish !== undefined && parsed.filmFinish !== draft.filmFinish) return true;
+    if (parsed.couple) {
+      const couple = parsed.couple;
+      if (couple.nameA !== undefined && couple.nameA !== draft.nameA) return true;
+      if (couple.nameB !== undefined && couple.nameB !== draft.nameB) return true;
+      if (couple.photoAKey !== undefined && couple.photoAKey !== draft.photoAKey) return true;
+      if (couple.photoBKey !== undefined && couple.photoBKey !== draft.photoBKey) return true;
+      if (
+        couple.photoTogetherKey !== undefined &&
+        (couple.photoTogetherKey || null) !== (draft.photoTogetherKey || null)
+      ) {
+        return true;
+      }
+      if (
+        couple.startDate !== undefined &&
+        (couple.startDate || null) !== (draft.startDate || null)
+      ) {
+        return true;
+      }
+    }
+    if (parsed.memories) {
+      if (
+        parsed.memories.answers &&
+        !this.sameAnswers(draft.memoriesAnswers, parsed.memories.answers)
+      ) {
+        return true;
+      }
+      if (
+        parsed.memories.dedication !== undefined &&
+        (parsed.memories.dedication || null) !== (draft.dedication || null)
+      ) {
+        return true;
+      }
+      if (
+        parsed.memories.storyMode &&
+        parsed.memories.storyMode !== (draft.storyMode ?? 'inspired')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private sameAnswers(stored: unknown, next: Record<string, string>) {
+    const current = (stored as Record<string, string> | null) ?? {};
+    return Object.entries(next).every(([key, value]) => (current[key] ?? '') === value);
   }
 
   async toPublic(draft: Awaited<ReturnType<typeof this.findByToken>>) {
@@ -91,6 +168,8 @@ export class DraftsService {
         photoConsent: draft.photoConsent,
       },
       styleId: draft.styleId,
+      filmFinish: draft.filmFinish,
+      storyMode: draft.storyMode ?? 'inspired',
       memories: {
         answers: (draft.memoriesAnswers as Record<string, string> | null) ?? {},
         dedication: draft.dedication,

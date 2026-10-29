@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { STYLES, PRICE_LABEL } from '@entre-nos/shared';
 import { StickyMobileCta } from '@/components/StickyMobileCta';
 import { LandingViewContent } from '@/components/LandingViewContent';
+import { Reveal } from '@/components/Reveal';
 
 const faqs = [
   {
@@ -28,11 +29,11 @@ const faqs = [
 
 const STYLE_PREVIEW: Record<string, string> = {
   aquarela: '/cute/cute-couple-cover.jpg',
-  editorial: '/styles/editorial.svg',
-  linha: '/styles/linha.svg',
+  editorial: '/cute/editorial-intimo.jpg',
+  linha: '/cute/linha-contemporanea.jpg',
   filme: '/cute/cute-rain-walk.jpg',
-  noturno: '/styles/noturno.svg',
-  papel: '/styles/papel.svg',
+  noturno: '/cute/noturno-sereno.jpg',
+  papel: '/cute/papel-artesanal.jpg',
 };
 
 export default function LandingPage() {
@@ -94,17 +95,18 @@ export default function LandingPage() {
 
       {/* Style showcase */}
       <section id="como-fica" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-        <p className="text-xs uppercase tracking-[0.22em] text-foam">Exemplos</p>
-        <h2 className="mt-3 max-w-2xl font-display text-3xl text-mist md:text-4xl">
-          Seis estilos. O mesmo casal, a mesma cena — agora com um ar mais fofo.
-        </h2>
-        <p className="mt-4 max-w-xl text-mist-dim">
-          As imagens abaixo são exemplos ilustrativos do visual de cada estilo, não o
-          livro final de um casal real.
-        </p>
+        <Reveal>
+          <h2 className="max-w-2xl font-display text-3xl text-mist md:text-4xl">
+            Seis estilos. O mesmo casal, a mesma cena — agora com um ar mais fofo.
+          </h2>
+          <p className="mt-4 max-w-xl text-mist-dim">
+            As imagens abaixo são exemplos ilustrativos do visual de cada estilo, não o
+            livro final de um casal real.
+          </p>
+        </Reveal>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {STYLES.map((style) => (
-            <figure key={style.id} className="group">
+          {STYLES.map((style, index) => (
+            <Reveal as="figure" key={style.id} delay={index * 80} className="group">
               <div className="relative aspect-[3/4] overflow-hidden rounded-sm bg-ink-soft ring-1 ring-blush-soft/20">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -120,7 +122,7 @@ export default function LandingPage() {
                 <p className="font-display text-xl text-mist">{style.name}</p>
                 <p className="mt-1 text-sm text-mist-dim">{style.description}</p>
               </figcaption>
-            </figure>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -128,7 +130,7 @@ export default function LandingPage() {
       {/* Atmosphere strip — rain walk + stickers */}
       <section className="relative overflow-hidden border-y border-white/10 bg-ink-soft/60">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-sm md:aspect-[5/6]">
+          <Reveal className="relative aspect-[4/5] overflow-hidden rounded-sm md:aspect-[5/6]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/cute/cute-rain-walk.jpg"
@@ -138,8 +140,8 @@ export default function LandingPage() {
             <span className="absolute left-3 top-3 rounded-sm bg-ink/70 px-2 py-1 text-[10px] uppercase tracking-wider text-champagne">
               Exemplo
             </span>
-          </div>
-          <div>
+          </Reveal>
+          <Reveal delay={80}>
             <h2 className="font-display text-3xl text-mist md:text-4xl">
               Corações, pastéis e um presente que parece feito à mão.
             </h2>
@@ -154,14 +156,14 @@ export default function LandingPage() {
               aria-hidden
               className="mt-8 max-h-40 w-auto rounded-sm object-cover opacity-90"
             />
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* What's included */}
       <section className="border-b border-white/10">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-28">
-          <div>
+          <Reveal>
             <h2 className="font-display text-3xl text-mist md:text-4xl">
               O que está incluso
             </h2>
@@ -169,53 +171,57 @@ export default function LandingPage() {
               Um presente digital completo, pensado para aniversário de namoro — e
               também para casamento, aniversário ou surpresa.
             </p>
-          </div>
+          </Reveal>
           <ul className="space-y-5 text-mist">
-            <li className="border-b border-white/10 pb-4">
+            <Reveal as="li" className="border-b border-white/10 pb-4">
               <strong className="font-display text-xl">12 páginas</strong>
               <p className="mt-1 text-sm text-mist-dim">
                 História montada só com o que vocês contarem — sem inventar casamento,
                 filhos ou viagens.
               </p>
-            </li>
-            <li className="border-b border-white/10 pb-4">
+            </Reveal>
+            <Reveal as="li" delay={80} className="border-b border-white/10 pb-4">
               <strong className="font-display text-xl">Prévia gratuita</strong>
               <p className="mt-1 text-sm text-mist-dim">
                 Capa + 1 página interna antes do pagamento.
               </p>
-            </li>
-            <li className="border-b border-white/10 pb-4">
+            </Reveal>
+            <Reveal as="li" delay={160} className="border-b border-white/10 pb-4">
               <strong className="font-display text-xl">{PRICE_LABEL}</strong>
               <p className="mt-1 text-sm text-mist-dim">
                 Pagamento seguro via Stripe. Entrega digital com link de leitura e de
                 presente.
               </p>
-            </li>
-            <li>
+            </Reveal>
+            <Reveal as="li" delay={240}>
               <strong className="font-display text-xl">Um estilo completo</strong>
               <p className="mt-1 text-sm text-mist-dim">
                 Você escolhe entre seis pacotes visuais — sem configuração extra de
                 paleta.
               </p>
-            </li>
+            </Reveal>
           </ul>
         </div>
       </section>
 
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-6 py-20 md:py-28">
-        <h2 className="font-display text-3xl text-mist md:text-4xl">Perguntas frequentes</h2>
+        <Reveal>
+          <h2 className="font-display text-3xl text-mist md:text-4xl">Perguntas frequentes</h2>
+        </Reveal>
         <div className="mt-10 space-y-6">
-          {faqs.map((item) => (
-            <details
+          {faqs.map((item, index) => (
+            <Reveal
+              as="details"
               key={item.q}
+              delay={index * 80}
               className="group border-b border-white/10 pb-4 open:pb-6"
             >
               <summary className="cursor-pointer list-none font-display text-xl text-mist marker:content-none">
                 {item.q}
               </summary>
               <p className="mt-3 text-sm leading-relaxed text-mist-dim">{item.a}</p>
-            </details>
+            </Reveal>
           ))}
         </div>
         <div className="mt-12 hidden md:block">

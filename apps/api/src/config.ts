@@ -41,7 +41,11 @@ export const config = {
   mockGeneration: (process.env.MOCK_GENERATION ?? 'true') === 'true',
   maxPreviewRegens: Number(process.env.MAX_PREVIEW_REGENS ?? MAX_PREVIEW_REGENS),
   openaiApiKey: sanitizeSecret(process.env.OPENAI_API_KEY),
+  openaiTextModel: process.env.OPENAI_TEXT_MODEL?.trim() || 'gpt-5.4',
   imageProviderApiKey: sanitizeSecret(process.env.IMAGE_PROVIDER_API_KEY),
+  imageModel: process.env.IMAGE_MODEL?.trim() || 'gpt-image-2.5-flare',
+  anthropicApiKey: sanitizeSecret(process.env.ANTHROPIC_API_KEY),
+  anthropicModel: process.env.ANTHROPIC_MODEL?.trim() || 'claude-haiku-4-5',
   resendApiKey: sanitizeSecret(process.env.RESEND_API_KEY),
   emailFrom: process.env.EMAIL_FROM ?? 'Entre Nós <noreply@entrenos.app>',
   meta: {

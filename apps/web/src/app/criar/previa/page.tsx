@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { STORY_MODE_NOTICE, type StoryModeId } from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
-import { api, ensureDraft } from '@/lib/api';
+import { api, ensureDraft, type Draft } from '@/lib/api';
 
 type Preview = {
   stage: string;
@@ -14,6 +16,8 @@ type Preview = {
   coverText?: string | null;
   pageText?: string | null;
   error?: string | null;
+  storyMode?: string | null;
+  imagesMock?: boolean;
   maxRegens?: number;
 };
 
@@ -26,17 +30,39 @@ const STAGE_LABEL: Record<string, string> = {
   failed: 'Falhou — você pode tentar de novo',
 };
 
+function isFrozenPreviewError(err: unknown) {
+  if (!axios.isAxiosError(err) || err.response?.status !== 400) return false;
+  const message = (err.response.data as { message?: string } | undefined)?.message ?? '';
+  return message.includes('congelados');
+}
+
+function errorMessage(err: unknown) {
+  if (axios.isAxiosError(err)) {
+    const message = (err.response?.data as { message?: string } | undefined)?.message;
+    if (message) return message;
+  }
+  return 'Não foi possível gerar a prévia.';
+}
+
 export default function PreviewPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const draftQuery = useQuery({ queryKey: ['draft'], queryFn: ensureDraft });
-  const [started, setStarted] = useState(false);
+  const token = draftQuery.data?.token;
+  const approved = Boolean(draftQuery.data?.previewApproved);
+  const kickedFor = useRef<string | null>(null);
 
   const previewQuery = useQuery({
-    queryKey: ['preview', draftQuery.data?.token],
-    enabled: Boolean(draftQuery.data?.token) && started,
+    queryKey: ['preview', token],
+    enabled: Boolean(token),
     queryFn: async () => {
-      const { data } = await api.get<Preview>(`/preview/${draftQuery.data!.token}`);
-      return data;
+      try {
+        const { data } = await api.get<Preview>(`/preview/${token}`);
+        return data;
+      } catch (err) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+        throw err;
+      }
     },
     refetchInterval: (q) => {
       const stage = q.state.data?.stage;
@@ -48,14 +74,26 @@ export default function PreviewPage() {
   const start = useMutation({
     mutationFn: async (regen: boolean) => {
       const draft = draftQuery.data ?? (await ensureDraft());
-      const { data } = await api.post<Preview>(
-        `/preview/${draft.token}/start${regen ? '?regen=1' : ''}`,
-      );
-      return data;
+      if (draft.previewApproved && !regen) {
+        const { data } = await api.get<Preview>(`/preview/${draft.token}`);
+        return data;
+      }
+      try {
+        const { data } = await api.post<Preview>(
+          `/preview/${draft.token}/start${regen ? '?regen=1' : ''}`,
+        );
+        return data;
+      } catch (err) {
+        if (!isFrozenPreviewError(err)) throw err;
+        queryClient.setQueryData<Draft>(['draft'], (current) =>
+          current ? { ...current, previewApproved: true } : current,
+        );
+        const { data } = await api.get<Preview>(`/preview/${draft.token}`);
+        return data;
+      }
     },
-    onSuccess: () => {
-      setStarted(true);
-      void previewQuery.refetch();
+    onSuccess: (data) => {
+      queryClient.setQueryData(['preview', token], data);
     },
   });
 
@@ -68,20 +106,35 @@ export default function PreviewPage() {
   });
 
   useEffect(() => {
-    if (draftQuery.data && !started && !start.isPending) {
-      start.mutate(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftQuery.data?.token]);
+    if (!token || approved || start.isPending) return;
+    if (!previewQuery.isFetched || previewQuery.isError) return;
+    const existing = previewQuery.data;
+    if (existing && existing.stage !== 'failed') return;
+    if (kickedFor.current === token) return;
+    kickedFor.current = token;
+    start.mutate(false);
+  }, [
+    token,
+    approved,
+    previewQuery.isFetched,
+    previewQuery.isError,
+    previewQuery.data,
+    start.isPending,
+    start,
+  ]);
 
   const preview = previewQuery.data;
   const stage = preview?.stage ?? 'queued';
+  const storyMode = (preview?.storyMode ??
+    draftQuery.data?.storyMode ??
+    'inspired') as StoryModeId;
+  const modeNotice = STORY_MODE_NOTICE[storyMode] ?? STORY_MODE_NOTICE.inspired;
 
   return (
     <FunnelShell
       step={5}
       title="Sua prévia"
-      subtitle="Capa + uma página interna. Exemplos gerados a partir do que vocês enviaram."
+      subtitle="Capa e a cena central, com o texto ao lado da ilustração para você ler no celular."
     >
       <div className="mb-6 rounded-sm border border-white/10 bg-ink-soft px-4 py-3">
         <p className="text-sm text-champagne">{STAGE_LABEL[stage] ?? stage}</p>
@@ -93,20 +146,50 @@ export default function PreviewPage() {
         ) : null}
       </div>
 
+      {approved ? (
+        <p className="mb-4 text-sm text-mist">
+          Prévia aprovada. As ilustrações ficam congeladas — siga para a revisão do presente.
+        </p>
+      ) : null}
+
       {preview?.error ? (
         <p className="mb-4 text-sm text-[var(--danger)]">{preview.error}</p>
       ) : null}
 
+      {start.isError ? (
+        <p className="mb-4 text-sm text-[var(--danger)]">{errorMessage(start.error)}</p>
+      ) : null}
+
+      {previewQuery.isError ? (
+        <p className="mb-4 text-sm text-[var(--danger)]">{errorMessage(previewQuery.error)}</p>
+      ) : null}
+
       {stage === 'ready' ? (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="mb-6 space-y-3">
+          <p className="text-sm text-mist">{modeNotice}</p>
+          {preview?.imagesMock ? (
+            <p className="rounded-sm border border-white/15 bg-white/5 px-4 py-3 text-sm text-mist-dim">
+              Ilustração local de desenvolvimento. Ela mostra o casal em silhueta, sem o modelo de
+              imagem. O texto já é a história, separado da figura.
+            </p>
+          ) : (
+            <p className="text-sm text-mist-dim">
+              A capa e a cena central usam as fotos como referência. O texto fica fora da imagem.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {stage === 'ready' ? (
+        <div className="grid gap-8 md:grid-cols-2">
           <figure>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview?.coverUrl ?? ''}
-              alt="Capa da prévia"
+              alt="Capa ilustrada do casal"
               className="w-full rounded-sm"
             />
-            <figcaption className="mt-2 whitespace-pre-wrap text-sm text-mist-dim">
+            <figcaption className="mt-4 whitespace-pre-wrap text-base leading-7 text-mist">
               {preview?.coverText}
             </figcaption>
           </figure>
@@ -114,15 +197,15 @@ export default function PreviewPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={preview?.pageUrl ?? ''}
-              alt="Página interna da prévia"
+              alt="Cena central do casal"
               className="w-full rounded-sm"
             />
-            <figcaption className="mt-2 whitespace-pre-wrap text-sm text-mist-dim">
+            <figcaption className="mt-4 whitespace-pre-wrap text-base leading-7 text-mist">
               {preview?.pageText}
             </figcaption>
           </figure>
         </div>
-      ) : (
+      ) : start.isError || previewQuery.isError ? null : (
         <div className="grid gap-4 md:grid-cols-2">
           <div className="aspect-[3/4] animate-pulse rounded-sm bg-white/5" />
           <div className="aspect-[3/4] animate-pulse rounded-sm bg-white/5" />
@@ -130,7 +213,14 @@ export default function PreviewPage() {
       )}
 
       <div className="mt-8 flex flex-wrap gap-3">
-        {stage === 'ready' ? (
+        {approved ? (
+          <Link
+            href="/criar/revisao"
+            className="rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink"
+          >
+            Continuar para a revisão
+          </Link>
+        ) : stage === 'ready' ? (
           <button
             type="button"
             onClick={() => approve.mutate()}
@@ -139,7 +229,8 @@ export default function PreviewPage() {
             Preparar meu presente
           </button>
         ) : null}
-        {(stage === 'ready' || stage === 'failed') &&
+        {!approved &&
+        (stage === 'ready' || stage === 'failed') &&
         (draftQuery.data?.previewRegenCount ?? 0) < (preview?.maxRegens ?? 3) ? (
           <button
             type="button"

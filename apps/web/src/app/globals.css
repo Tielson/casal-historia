@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #1c1418;
-  --ink-soft: #2a1f24;
-  --mist: #fff5f7;
-  --mist-dim: #e8d0d6;
-  --champagne: #f0d4b8;
+  --ink: #1a1214;
+  --ink-soft: #2c1e24;
+  --mist: #fff4f2;
+  --mist-dim: #e7cfd4;
+  --champagne: #f6d7a8;
   --copper: #c27a4f;
-  --blush: #e88a9a;
-  --blush-soft: #f2b6c1;
+  --blush: #e07a8c;
+  --blush-soft: #f4b7c3;
   --peach: #f7d0d8;
   --sea: #6b4a62;
   --foam: #e8a0ae;
@@ -140,6 +140,16 @@ a {
   animation: heart-float 5.2s ease-in-out 0.8s infinite;
 }
 
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.reveal.is-visible {
+  animation: rise 0.9s ease both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
 .sticky-cta-pad {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
@@ -156,7 +166,14 @@ a {
   .heart-float-delay,
   .animate-rise,
   .animate-rise-delay,
-  .animate-rise-delay-2 {
+  .animate-rise-delay-2,
+  .reveal,
+  .reveal.is-visible {
     animation: none;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

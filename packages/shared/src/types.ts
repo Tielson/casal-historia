@@ -1,4 +1,11 @@
-import type { OccasionId, StyleId, FunnelStep } from './constants';
+import type {
+  FunnelStep,
+  OccasionId,
+  PageLayout,
+  StoryModeId,
+  StyleId,
+  TextZone,
+} from './constants';
 
 export type DraftStatus =
   | 'draft'
@@ -16,6 +23,7 @@ export type OrderStatus =
   | 'paid'
   | 'producing'
   | 'delivered'
+  | 'needs_review'
   | 'refunded'
   | 'cancelled';
 
@@ -43,6 +51,8 @@ export interface DraftPublic {
     photoConsent?: boolean;
   } | null;
   styleId?: StyleId | string | null;
+  filmFinish?: boolean;
+  storyMode?: StoryModeId | string | null;
   memories?: {
     answers?: Record<string, string>;
     dedication?: string | null;
@@ -55,6 +65,16 @@ export interface DraftPublic {
   updatedAt: string;
 }
 
+/** One page as the reader sees it: the illustration and the text laid over it. */
+export interface PageView {
+  index: number;
+  url: string;
+  text: string;
+  dialogue?: string[];
+  layout: PageLayout;
+  textZone: TextZone;
+}
+
 export interface PreviewPublic {
   id: string;
   draftId: string;
@@ -63,6 +83,11 @@ export interface PreviewPublic {
   pageUrl?: string | null;
   coverText?: string | null;
   pageText?: string | null;
+  /** Cover and the next pages, in order. */
+  pages?: PageView[];
+  title?: string | null;
   error?: string | null;
+  storyMode?: StoryModeId | string | null;
+  imagesMock?: boolean;
   updatedAt: string;
 }

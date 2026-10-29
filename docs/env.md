@@ -40,10 +40,14 @@ Copy from repo `.env.example`.
 
 | Key | Purpose |
 |-----|---------|
-| `MOCK_GENERATION` | `true` → placeholders |
+| `MOCK_GENERATION` | `true` → local story and silhouette scenes for development. `false` writes with ChatGPT when `OPENAI_API_KEY` is set, otherwise Claude; images use the OpenAI key. Failure stays pending |
 | `MAX_PREVIEW_REGENS` | Default `3` |
-| `OPENAI_API_KEY` | Future text provider |
-| `IMAGE_PROVIDER_API_KEY` | Future image provider |
+| `OPENAI_API_KEY` | ChatGPT writes the manuscript and OpenAI illustrates with the couple's photos |
+| `OPENAI_TEXT_MODEL` | Default `gpt-5.4` |
+| `ANTHROPIC_API_KEY` | Claude, used only when `OPENAI_API_KEY` is empty |
+| `ANTHROPIC_MODEL` | Default `claude-haiku-4-5` |
+| `IMAGE_PROVIDER_API_KEY` | Fallback image key if `OPENAI_API_KEY` is empty |
+| `IMAGE_MODEL` | Default `gpt-image-2.5-flare` |
 | `RESEND_API_KEY` | Real email; else log stub |
 | `EMAIL_FROM` | From header |
 

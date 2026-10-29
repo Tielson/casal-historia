@@ -3,23 +3,25 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { STYLES, styleSchema, type StyleForm } from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
 import { ensureDraft, patchDraft } from '@/lib/api';
+import { cacheDraft, draftSaveError, hrefAfterEdit, reachedPreview } from '@/lib/funnel';
 import { trackFunnel } from '@/lib/meta';
 
 const STYLE_PREVIEW: Record<string, string> = {
   aquarela: '/cute/cute-couple-cover.jpg',
-  editorial: '/styles/editorial.svg',
-  linha: '/styles/linha.svg',
+  editorial: '/cute/editorial-intimo.jpg',
+  linha: '/cute/linha-contemporanea.jpg',
   filme: '/cute/cute-rain-walk.jpg',
-  noturno: '/styles/noturno.svg',
-  papel: '/styles/papel.svg',
+  noturno: '/cute/noturno-sereno.jpg',
+  papel: '/cute/papel-artesanal.jpg',
 };
 
 export default function StylePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const draftQuery = useQuery({ queryKey: ['draft'], queryFn: ensureDraft });
   const form = useForm<StyleForm>({
     resolver: zodResolver(styleSchema),
@@ -41,7 +43,10 @@ export default function StylePage() {
       });
       return updated;
     },
-    onSuccess: () => router.push('/criar/lembrancas'),
+    onSuccess: (updated) => {
+      cacheDraft(queryClient, updated);
+      router.push(hrefAfterEdit(draftQuery.data?.step, '/criar/lembrancas'));
+    },
   });
 
   return (
@@ -57,8 +62,8 @@ export default function StylePage() {
             return (
               <label
                 key={style.id}
-                className={`cursor-pointer overflow-hidden rounded-sm border ${
-                  selected ? 'border-blush-soft' : 'border-white/15'
+                className={`cursor-pointer overflow-hidden rounded-sm border-2 ${
+                  selected ? 'border-blush' : 'border-white/15'
                 }`}
               >
                 <input
@@ -86,12 +91,17 @@ export default function StylePage() {
             );
           })}
         </div>
+        {save.isError ? (
+          <p className="text-sm text-[var(--danger)]">{draftSaveError(save.error)}</p>
+        ) : null}
         <button
           type="submit"
           disabled={save.isPending}
           className="rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink"
         >
-          Quero nossa história assim
+          {reachedPreview(draftQuery.data?.step)
+            ? 'Salvar e voltar à prévia'
+            : 'Quero nossa história assim'}
         </button>
       </form>
     </FunnelShell>

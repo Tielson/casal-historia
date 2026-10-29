@@ -37,7 +37,7 @@ export default function GiftBookPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-mist">
-      <p className="text-xs uppercase tracking-[0.2em] text-foam">Presente · somente leitura</p>
+      <p className="italic text-base text-blush-soft">Um presente, só para ler</p>
       <h1 className="mt-3 font-display text-4xl text-champagne">{book?.names ?? '…'}</h1>
       {book?.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

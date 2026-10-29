@@ -25,6 +25,9 @@ model Draft {
   startDate         String?
   photoConsent      Boolean  @default(false)
   styleId           String?
+  /// Old-film color finish over the chosen style
+  filmFinish        Boolean  @default(false)
+  storyMode         String?  @default("inspired")
   memoriesAnswers   Json?
   dedication        String?
   email             String?
@@ -63,6 +66,9 @@ model Preview {
   pageKey   String?
   coverText String?
   pageText  String?
+  manuscript Json?
+  sceneKeys  Json?
+  imagesMock Boolean  @default(false)
   error     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -105,6 +111,8 @@ model Deliverable {
   storageKey String
   pageIndex  Int?
   mimeType   String?
+  title      String?
+  body       String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

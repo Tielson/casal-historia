@@ -11,7 +11,16 @@ import { PdfService } from './pdf.service';
 import { EmailService } from './email.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { QueueService } from '../queue/queue.service';
+import { Prisma } from '@prisma/client';
+import { manuscriptSchema, type StoryModeId } from '@entre-nos/shared';
 import { config } from '../config';
+import {
+  APPROVED_LIMITS,
+  assessImages,
+  assessManuscript,
+  DeliveryBlocked,
+} from '../generation/book-quality';
+import { textFits } from './pdf-layout';
 
 @Injectable()
 export class ProductionService implements OnModuleInit {
@@ -56,62 +65,157 @@ export class ProductionService implements OnModuleInit {
       data: { status: 'producing' },
     });
 
-    const draft = order.draft;
-    const answers = (draft.memoriesAnswers as Record<string, string> | null) ?? {};
-    const input = {
-      nameA: draft.nameA ?? 'A',
-      nameB: draft.nameB ?? 'B',
-      styleId: draft.styleId ?? 'editorial',
-      occasion: draft.occasion,
-      startDate: draft.startDate,
-      dedication: draft.dedication,
-      answers,
-    };
+    try {
+      const draft = order.draft;
+      const preview = draft.preview;
+      if (!preview?.manuscript) {
+        throw new DeliveryBlocked([
+          'Manuscrito aprovado ausente. A história precisa ser gerada de novo.',
+        ]);
+      }
+      const manuscript = manuscriptSchema.parse(preview.manuscript);
+      const answers = (draft.memoriesAnswers as Record<string, string> | null) ?? {};
+      const storyMode = (draft.storyMode as StoryModeId | null) ?? manuscript.storyMode;
+      const input = {
+        nameA: draft.nameA ?? 'A',
+        nameB: draft.nameB ?? 'B',
+        styleId: draft.styleId ?? 'editorial',
+        occasion: draft.occasion,
+        startDate: draft.startDate,
+        dedication: draft.dedication,
+        answers,
+        storyMode,
+        photoAKey: draft.photoAKey,
+        photoBKey: draft.photoBKey,
+        photoTogetherKey: draft.photoTogetherKey,
+      };
 
-    // Reuse approved preview assets
-    const keys: string[] = [];
-    if (draft.preview?.coverKey) keys.push(draft.preview.coverKey);
-    if (draft.preview?.pageKey) keys.push(draft.preview.pageKey);
+      const reuseMock = !config.mockGeneration && preview.imagesMock;
+      const existing = reuseMock ? {} : keyMap(preview.sceneKeys);
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { productionStage: 'scenes' },
+      });
+      const illustrated = await this.generation.generateRemainingScenes(
+        orderId,
+        input,
+        manuscript,
+        existing,
+      );
+      await this.prisma.preview.update({
+        where: { draftId: draft.id },
+        data: {
+          sceneKeys: illustrated.sceneKeys as Prisma.InputJsonValue,
+          imagesMock: illustrated.imagesMock,
+        },
+      });
 
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: { productionStage: 'remaining_pages' },
-    });
-    const remaining = await this.generation.generateRemainingPages(orderId, input);
-    keys.push(...remaining.map((p) => p.key));
+      const pages = [...manuscript.pages]
+        .sort((a, b) => a.index - b.index)
+        .map((page) => {
+          const imageKey = illustrated.sceneKeys[page.sceneId];
+          if (!imageKey) {
+            throw new DeliveryBlocked([`Imagem obrigatória ausente: ${page.sceneId}.`]);
+          }
+          return page;
+        });
 
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: { productionStage: 'pdf' },
-    });
-    const pdfKey = await this.pdf.assemble(
-      orderId,
-      keys,
-      `${input.nameA} & ${input.nameB}`,
-    );
+      const reasons = [
+        ...assessManuscript({
+          pages,
+          answers,
+          storyMode,
+          thread: manuscript.thread,
+          limits: APPROVED_LIMITS,
+        }).reasons,
+        ...assessImages({
+          scenes: manuscript.scenes.map((scene) => ({
+            id: scene.id,
+            placeholder: illustrated.imagesMock,
+          })),
+          allowPlaceholder: config.mockGeneration,
+        }).reasons,
+        ...pages
+          .filter((page) => !textFits(page.title, page.body, page.index))
+          .map((page) => `Texto cortado na página ${page.index}.`),
+      ];
+      if (reasons.length) throw new DeliveryBlocked(reasons);
 
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: {
-        pdfKey,
-        status: 'delivered',
-        productionStage: 'delivered',
-        deliveredAt: new Date(),
-      },
-    });
-    await this.prisma.draft.update({
-      where: { id: order.draftId },
-      data: { status: 'delivered' },
-    });
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { productionStage: 'pdf' },
+      });
+      const pdfPages = pages.map((page) => ({
+        index: page.index,
+        title: page.title,
+        body: page.body,
+        imageKey: illustrated.sceneKeys[page.sceneId],
+      }));
+      const pdfKey = await this.pdf.assemble(orderId, pdfPages);
 
-    await this.analytics.track({
-      name: 'delivery',
-      draftId: order.draftId,
-      orderId,
-    });
+      await this.prisma.deliverable.deleteMany({ where: { orderId } });
+      for (const page of pdfPages) {
+        await this.prisma.deliverable.create({
+          data: {
+            orderId,
+            kind: 'page',
+            storageKey: page.imageKey,
+            pageIndex: page.index,
+            mimeType: 'image/jpeg',
+            title: page.title,
+            body: page.body,
+          },
+        });
+      }
+      await this.prisma.deliverable.create({
+        data: {
+          orderId,
+          kind: 'pdf',
+          storageKey: pdfKey,
+          mimeType: 'application/pdf',
+        },
+      });
 
-    await this.queue.enqueue({ kind: 'email', orderId });
-    return { ok: true, pdfKey };
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          pdfKey,
+          status: 'delivered',
+          productionStage: 'delivered',
+          productionError: null,
+          deliveredAt: new Date(),
+        },
+      });
+      await this.prisma.draft.update({
+        where: { id: order.draftId },
+        data: { status: 'delivered' },
+      });
+
+      await this.analytics.track({
+        name: 'delivery',
+        draftId: order.draftId,
+        orderId,
+      });
+
+      await this.queue.enqueue({ kind: 'email', orderId });
+      return { ok: true, pdfKey };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Falha na produção';
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'needs_review',
+          productionStage: 'needs_review',
+          productionError: message.slice(0, 2000),
+        },
+      });
+      await this.prisma.draft.update({
+        where: { id: order.draftId },
+        data: { status: 'failed' },
+      });
+      if (err instanceof DeliveryBlocked) return { ok: false, error: message };
+      throw err;
+    }
   }
 
   async assemblePdf(orderId: string) {
@@ -123,7 +227,9 @@ export class ProductionService implements OnModuleInit {
       where: { id: orderId },
       include: { draft: true },
     });
-    if (!order) return;
+    if (!order || order.status !== 'delivered' || !order.pdfKey) {
+      return { ok: false, reason: 'not_delivered' };
+    }
     const to = order.email ?? order.draft.email;
     if (!to) return { ok: false, reason: 'no_email' };
     return this.email.sendBookReady({
@@ -223,4 +329,13 @@ export class ProductionService implements OnModuleInit {
       noindex: mode === 'gift',
     };
   }
+}
+
+function keyMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const keys: Record<string, string> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item === 'string' && item) keys[key] = item;
+  }
+  return keys;
 }

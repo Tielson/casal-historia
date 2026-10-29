@@ -158,6 +158,7 @@ export class PaymentsService {
       stripePaymentId: `mock_pi_${order.id}`,
       amountCents: order.amountCents,
       currency: order.currency,
+      rawType: 'mock',
     });
   }
 
@@ -177,7 +178,15 @@ export class PaymentsService {
       throw new BadRequestException('Assinatura inválida');
     }
 
-    if (event.type !== 'checkout.session.completed') {
+    const fulfillmentEvents = new Set([
+      'checkout.session.completed',
+      'checkout.session.async_payment_succeeded',
+    ]);
+    if (event.type === 'checkout.session.async_payment_failed') {
+      this.logger.warn(`Pagamento assíncrono falhou: ${event.id}`);
+      return { received: true, failed: true };
+    }
+    if (!fulfillmentEvents.has(event.type)) {
       return { received: true, ignored: event.type };
     }
 
@@ -207,6 +216,7 @@ export class PaymentsService {
       amountCents: amount,
       currency,
       email: session.customer_details?.email ?? session.customer_email,
+      rawType: event.type,
     });
   }
 
@@ -218,6 +228,7 @@ export class PaymentsService {
     amountCents: number;
     currency: string;
     email?: string | null;
+    rawType: string;
   }) {
     const existing = await this.prisma.payment.findUnique({
       where: { stripeEventId: input.stripeEventId },
@@ -244,7 +255,7 @@ export class PaymentsService {
         amountCents: input.amountCents,
         currency: input.currency,
         status: 'paid',
-        rawType: 'checkout.session.completed',
+        rawType: input.rawType,
       },
     });
 

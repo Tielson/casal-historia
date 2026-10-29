@@ -60,7 +60,7 @@ Redis offline → fila em memória. R2/MinIO offline → storage em disco (`.loc
 
 | Área | Mock (default) | Real |
 |------|----------------|------|
-| Geração de imagens/texto | `MOCK_GENERATION=true` (placeholders SVG→JPEG + texto templated só com respostas do usuário) | `IMAGE_PROVIDER_API_KEY` / `OPENAI_API_KEY` (adapter stub até ligar provedor) |
+| Geração de imagens/texto | `MOCK_GENERATION=true` (história local + silhuetas, sem colar as respostas) | `OPENAI_API_KEY` escreve o manuscrito no ChatGPT (`OPENAI_TEXT_MODEL`, padrão `gpt-5.4`) e ilustra com as fotos (`IMAGE_MODEL`, padrão `gpt-image-2.5-flare`). Sem essa chave, `ANTHROPIC_API_KEY` escreve o texto. Falha não vira degradê e não entrega o PDF |
 | Stripe | Sem `STRIPE_SECRET_KEY` → checkout mock + `POST /payments/mock-pay/:orderId` | Checkout Session + webhook com assinatura |
 | E-mail | Log no console | `RESEND_API_KEY` |
 | Meta Pixel/CAPI | Stub em console + `POST /meta/capi` | `NEXT_PUBLIC_META_PIXEL_ID`, `META_PIXEL_ID`, `META_ACCESS_TOKEN`, `META_CAPI_ENABLED=true` |

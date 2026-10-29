@@ -1,17 +1,33 @@
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
-import { STYLES, MEMORY_QUESTIONS, BOOK_PAGE_COUNT } from '@entre-nos/shared';
+import {
+  BOOK_PAGE_COUNT,
+  CAST_SCENE_KEY,
+  OCCASIONS,
+  PREVIEW_PAGES,
+  pageSceneKey,
+  type Manuscript,
+  type StoryModeId,
+} from '@entre-nos/shared';
 import { config } from '../config';
 import { StorageService } from '../storage/storage.service';
+import { assessManuscript, DeliveryBlocked } from './book-quality';
+import { authorWithClaude } from './claude-author';
+import { composeLocalManuscript, type AuthorInput } from './local-author';
+import { authorWithOpenAI } from './openai-author';
+import { renderCharacterSheet, renderScene } from './scene-images';
 
-export interface BookInput {
-  nameA: string;
-  nameB: string;
-  styleId: string;
-  occasion?: string | null;
-  startDate?: string | null;
-  dedication?: string | null;
-  answers: Record<string, string>;
+export interface BookInput extends AuthorInput {
+  storyMode: StoryModeId;
+}
+
+export interface PreviewAssets {
+  manuscript: Manuscript;
+  sceneKeys: Record<string, string>;
+  coverKey: string;
+  pageKey: string;
+  coverText: string;
+  pageText: string;
+  imagesMock: boolean;
 }
 
 @Injectable()
@@ -20,104 +36,136 @@ export class GenerationService {
 
   constructor(private readonly storage: StorageService) {}
 
-  buildTexts(input: BookInput) {
-    const style = STYLES.find((s) => s.id === input.styleId)?.name ?? 'nosso estilo';
-    // Anti-invention: only use provided answers — never invent marriage/children/trips.
-    const meet = input.answers.como_conheceram?.trim() || 'o início que vocês descreveram';
-    const moment =
-      input.answers.momento_especial?.trim() || 'o momento especial que vocês guardam';
-    const love =
-      input.answers.o_que_ama?.trim() || 'o que vocês mais valorizam um no outro';
+  async generatePreviewAssets(
+    draftToken: string,
+    input: BookInput,
+    onStage?: (stage: 'writing' | 'illustrating' | 'layout') => Promise<void>,
+  ): Promise<PreviewAssets> {
+    await onStage?.('writing');
+    const manuscript = await this.writeManuscript(input);
+    const verdict = assessManuscript({
+      pages: manuscript.pages,
+      answers: input.answers,
+      storyMode: input.storyMode,
+      thread: manuscript.thread,
+      phases: manuscript.phases,
+    });
+    if (!verdict.ok) throw new DeliveryBlocked(verdict.reasons);
 
-    const coverText = `${input.nameA} & ${input.nameB}\nEntre Nós`;
-    const pageText = [
-      `No estilo ${style}, esta página abre com o começo: ${meet}.`,
-      `Vocês guardam com carinho: ${moment}.`,
-      `E o que sustenta o dia a dia: ${love}.`,
-      input.dedication?.trim() ? `Dedicatória: ${input.dedication.trim()}` : null,
-      input.startDate ? `Desde ${input.startDate}.` : null,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    await onStage?.('illustrating');
+    const { sceneKeys, imagesMock } = await this.illustrate({
+      prefix: `drafts/${draftToken}/preview`,
+      input,
+      manuscript,
+      existing: {},
+      pages: [...PREVIEW_PAGES],
+    });
 
-    return { coverText, pageText };
-  }
-
-  async generatePreviewAssets(draftToken: string, input: BookInput) {
-    const texts = this.buildTexts(input);
-    const useMock = config.mockGeneration || !config.imageProviderApiKey;
-    if (!useMock) {
-      this.logger.warn(
-        'Real image provider keys present but provider adapter is stub — using mock images',
-      );
-    }
-
-    const cover = await this.mockImage(
-      `${input.nameA} & ${input.nameB}`,
-      'Capa — exemplo de prévia',
-      input.styleId,
+    await onStage?.('layout');
+    const second = manuscript.pages.find((page) => page.index === 2);
+    if (!second) throw new DeliveryBlocked(['História incompleta: falta a primeira cena.']);
+    const occasion = OCCASIONS.find((item) => item.id === input.occasion)?.label;
+    this.logger.log(
+      `Prévia de ${draftToken} escrita no modo ${input.storyMode}${imagesMock ? ' (ilustração local)' : ''}`,
     );
-    const page = await this.mockImage(
-      'Página interna',
-      texts.pageText.slice(0, 160),
-      input.styleId,
-    );
-    const coverKey = `drafts/${draftToken}/preview/cover.jpg`;
-    const pageKey = `drafts/${draftToken}/preview/page.jpg`;
-    await this.storage.putObject(coverKey, cover, 'image/jpeg');
-    await this.storage.putObject(pageKey, page, 'image/jpeg');
-    return { ...texts, coverKey, pageKey, mock: true };
-  }
-
-  async generateRemainingPages(orderId: string, input: BookInput) {
-    const pages: { index: number; key: string; text: string }[] = [];
-    for (let i = 2; i < BOOK_PAGE_COUNT; i++) {
-      const label = `Página ${i + 1}`;
-      const q = MEMORY_QUESTIONS[i % MEMORY_QUESTIONS.length];
-      const snippet = input.answers[q.id]?.trim() || q.label;
-      const buf = await this.mockImage(label, snippet.slice(0, 140), input.styleId);
-      const key = `orders/${orderId}/pages/page-${String(i + 1).padStart(2, '0')}.jpg`;
-      await this.storage.putObject(key, buf, 'image/jpeg');
-      pages.push({ index: i + 1, key, text: snippet });
-    }
-    return pages;
-  }
-
-  private async mockImage(title: string, subtitle: string, styleId: string) {
-    const palette: Record<string, [string, string]> = {
-      aquarela: ['#7ea8b8', '#f3efe6'],
-      editorial: ['#2c3338', '#e7e2d8'],
-      linha: ['#1d1d1d', '#f5f5f0'],
-      filme: ['#6b4a35', '#efe0c8'],
-      noturno: ['#1a2633', '#c9d6e2'],
-      papel: ['#4a453d', '#ebe4d6'],
+    return {
+      manuscript,
+      sceneKeys,
+      coverKey: sceneKeys[pageSceneKey(1)],
+      pageKey: sceneKeys[pageSceneKey(2)],
+      coverText: [manuscript.title, `${input.nameA} & ${input.nameB}`, occasion]
+        .filter(Boolean)
+        .join('\n'),
+      pageText: second.text,
+      imagesMock,
     };
-    const [bg, fg] = palette[styleId] ?? ['#1a2633', '#e8eef2'];
-    const safeTitle = escapeXml(title);
-    const safeSub = escapeXml(subtitle);
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="${bg}"/>
-      <stop offset="100%" stop-color="#0f1216"/>
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="1600" fill="url(#g)"/>
-  <circle cx="980" cy="220" r="180" fill="${fg}" fill-opacity="0.08"/>
-  <circle cx="180" cy="1320" r="260" fill="${fg}" fill-opacity="0.06"/>
-  <text x="80" y="200" fill="${fg}" font-size="28" font-family="Georgia, serif" opacity="0.7">Entre Nós · exemplo</text>
-  <text x="80" y="700" fill="${fg}" font-size="56" font-family="Georgia, serif">${safeTitle}</text>
-  <text x="80" y="800" fill="${fg}" font-size="28" font-family="Georgia, serif" opacity="0.85">${safeSub}</text>
-</svg>`;
-    return sharp(Buffer.from(svg)).jpeg({ quality: 85 }).toBuffer();
   }
-}
 
-function escapeXml(s: string) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  /** Draws the pages the preview did not show, from the same character sheet. */
+  async generateRemainingScenes(
+    orderId: string,
+    input: BookInput,
+    manuscript: Manuscript,
+    existing: Record<string, string>,
+  ): Promise<{ sceneKeys: Record<string, string>; imagesMock: boolean }> {
+    const pages = Array.from({ length: BOOK_PAGE_COUNT }, (_, offset) => offset + 1);
+    const result = await this.illustrate({
+      prefix: `orders/${orderId}/scenes`,
+      input,
+      manuscript,
+      existing,
+      pages,
+    });
+    return { sceneKeys: result.sceneKeys, imagesMock: config.mockGeneration || result.imagesMock };
+  }
+
+  private async illustrate(input: {
+    prefix: string;
+    input: BookInput;
+    manuscript: Manuscript;
+    existing: Record<string, string>;
+    pages: number[];
+  }): Promise<{ sceneKeys: Record<string, string>; imagesMock: boolean }> {
+    const author = input.input;
+    const photos = await this.loadPhotos(author);
+    const sceneKeys = { ...input.existing };
+    let imagesMock = false;
+    const accept = (placeholder: boolean) => {
+      if (!config.mockGeneration && placeholder) {
+        throw new DeliveryBlocked(['Geração de imagem substituída por fundo decorativo.']);
+      }
+      imagesMock = imagesMock || placeholder;
+    };
+
+    let sheet: Buffer;
+    if (sceneKeys[CAST_SCENE_KEY]) {
+      sheet = await this.storage.getObject(sceneKeys[CAST_SCENE_KEY]);
+    } else {
+      const rendered = await renderCharacterSheet({ author, manuscript: input.manuscript, photos });
+      accept(rendered.placeholder);
+      sheet = rendered.buffer;
+      const key = `${input.prefix}/${CAST_SCENE_KEY}.jpg`;
+      await this.storage.putObject(key, sheet, 'image/jpeg');
+      sceneKeys[CAST_SCENE_KEY] = key;
+    }
+
+    for (const index of input.pages) {
+      const id = pageSceneKey(index);
+      if (sceneKeys[id]) continue;
+      const page = input.manuscript.pages.find((item) => item.index === index);
+      if (!page) throw new DeliveryBlocked([`História incompleta: falta a página ${index}.`]);
+      const rendered = await renderScene({
+        author,
+        manuscript: input.manuscript,
+        page,
+        references: [sheet, ...photos],
+      });
+      accept(rendered.placeholder);
+      const key = `${input.prefix}/${id}.jpg`;
+      await this.storage.putObject(key, rendered.buffer, 'image/jpeg');
+      sceneKeys[id] = key;
+    }
+    return { sceneKeys, imagesMock };
+  }
+
+  private async writeManuscript(input: BookInput): Promise<Manuscript> {
+    if (config.mockGeneration) return composeLocalManuscript(input);
+    if (config.openaiApiKey) return authorWithOpenAI(input);
+    return authorWithClaude(input);
+  }
+
+  private async loadPhotos(input: BookInput): Promise<Buffer[]> {
+    if (config.mockGeneration) return [];
+    const keys = [input.photoAKey, input.photoBKey, input.photoTogetherKey].filter(
+      (key): key is string => Boolean(key),
+    );
+    if (keys.length < 2) {
+      throw new DeliveryBlocked(['Foto de referência ausente para ilustrar o casal.']);
+    }
+    const photos: Buffer[] = [];
+    for (const key of keys) {
+      photos.push(await this.storage.getObject(key));
+    }
+    return photos;
+  }
 }

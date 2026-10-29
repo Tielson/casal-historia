@@ -37,7 +37,7 @@ docker-compose.yml  postgres + redis + minio
 
 - Price only on API (`STRIPE_PRICE_CENTS`)
 - Credentials only on API
-- Text never invents marriage/children/trips not present in answers
+- Text follows the chosen story mode: `real` develops only the given facts; `inspired` may add gesture, dialogue, and atmosphere and must say the story is inspired by the couple; `adventure` is disclosed fiction starring the couple. None of the modes invent marriage, children, or trips that were not in the answers, and adventure does not turn those into the plot either.
 - Regen limit enforced server-side (`MAX_PREVIEW_REGENS`)
 - Webhooks idempotent; production trigger safe to retry
 - Admin gated by `ADMIN_TOKEN` (`x-admin-token`)
@@ -47,4 +47,4 @@ docker-compose.yml  postgres + redis + minio
 - Redis down → in-memory job runner
 - R2/MinIO down → `.local-storage` + `/uploads/local?key=` (photos + PDFs otherwise via private R2 + signed GET)
 - No Stripe keys → mock checkout URL + `POST /payments/mock-pay/:orderId`
-- `MOCK_GENERATION=true` → placeholder images + templated copy
+- `MOCK_GENERATION=true` → local manuscript plus silhouette scenes, labeled in the preview. A failed real generation never becomes this placeholder, and a PDF is not delivered until the book passes validation.
