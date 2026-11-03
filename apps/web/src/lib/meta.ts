@@ -25,8 +25,8 @@ export function initMetaPixel() {
   }
   if (window.fbq) return;
   const n = function (...args: unknown[]) {
-    // @ts-expect-error fbq queue
-    n.callMethod ? n.callMethod(...args) : n.queue.push(args);
+    if (n.callMethod) n.callMethod(...args);
+    else n.queue.push(args);
   } as ((...args: unknown[]) => void) & {
     queue: unknown[];
     loaded: boolean;
@@ -57,7 +57,7 @@ export function trackMeta(
     eventName: event,
     value: params?.value,
     currency: params?.currency,
-    orderId: params?.order_id ?? params?.content_ids?.[0],
+    orderId: params?.order_id ?? (params?.content_ids as unknown[] | undefined)?.[0],
     eventId,
   }).catch(() => undefined);
 }
