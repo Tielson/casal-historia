@@ -1,18 +1,28 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Figtree } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from '@/components/Providers';
 import './globals.css';
 
-const display = Cormorant_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const display = localFont({
+  src: [
+    { path: '../fonts/cormorant-garamond-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../fonts/cormorant-garamond-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../fonts/cormorant-garamond-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: '../fonts/cormorant-garamond-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-display',
+  display: 'swap',
 });
 
-const body = Figtree({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const body = localFont({
+  src: [
+    { path: '../fonts/figtree-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../fonts/figtree-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../fonts/figtree-latin-600-normal.woff2', weight: '600', style: 'normal' },
+    { path: '../fonts/figtree-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-body',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
