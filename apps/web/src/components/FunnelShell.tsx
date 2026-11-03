@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { Logo } from '@/components/Logo';
 import { useDraft } from '@/hooks/useDraft';
 import { FUNNEL_PAGES, PREVIEW_PAGE_INDEX, furthestPageIndex } from '@/lib/funnel';
 
@@ -23,8 +24,8 @@ export function FunnelShell({
   return (
     <main className="min-h-[100svh] bg-ink text-mist">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-        <Link href="/" className="font-display text-2xl text-champagne">
-          Entre Nós
+        <Link href="/" className="text-2xl">
+          <Logo />
         </Link>
         <div className="flex items-center gap-4">
           {previous ? (

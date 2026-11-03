@@ -109,9 +109,11 @@ export class PaymentsService {
       };
     }
 
+    const customerEmail = email ?? draft.email ?? undefined;
     const session = await this.stripe.checkout.sessions.create({
       mode: 'payment',
-      customer_email: email ?? draft.email ?? undefined,
+      customer_email: customerEmail,
+      payment_intent_data: customerEmail ? { receipt_email: customerEmail } : undefined,
       line_items: [
         {
           quantity: 1,
@@ -119,8 +121,8 @@ export class PaymentsService {
             currency,
             unit_amount: amount,
             product_data: {
-              name: 'Entre Nós — livro digital personalizado',
-              description: '12 páginas digitais com prévia aprovada',
+              name: `${config.appName} — livro digital personalizado`,
+              description: `12 páginas digitais com prévia aprovada. Um produto ${config.companyName}.`,
             },
           },
         },
@@ -234,6 +236,7 @@ export class PaymentsService {
       where: { stripeEventId: input.stripeEventId },
     });
     if (existing) {
+      await this.queue.enqueue({ kind: 'receipt', orderId: existing.orderId });
       return { ok: true, idempotent: true, orderId: existing.orderId };
     }
 
@@ -260,6 +263,7 @@ export class PaymentsService {
     });
 
     if (order.status === 'paid' || order.status === 'producing' || order.status === 'delivered') {
+      await this.queue.enqueue({ kind: 'receipt', orderId: order.id });
       return { ok: true, idempotent: true, orderId: order.id };
     }
 
@@ -294,7 +298,7 @@ export class PaymentsService {
       orderId: order.id,
     });
 
-    // Idempotent production trigger
+    await this.queue.enqueue({ kind: 'receipt', orderId: order.id });
     await this.queue.enqueue({ kind: 'production', orderId: order.id });
 
     return { ok: true, orderId: order.id };

@@ -97,7 +97,11 @@ export default function ReviewPage() {
           value={`${draft?.couple?.nameA ?? '—'} & ${draft?.couple?.nameB ?? '—'}`}
           href="/criar/casal"
         />
-        <Row label="Estilo" value={style?.name ?? '—'} href="/criar/estilo" />
+        <Row
+          label="Estilo"
+          value={style ? `${style.name}${draft?.filmFinish ? ' · acabamento filme antigo' : ''}` : '—'}
+          href="/criar/estilo"
+        />
         <Row label="História" value={storyMode?.name ?? 'Inspirada em nós'} href="/criar/lembrancas" />
         <Row
           label="Lembranças"
@@ -134,9 +138,17 @@ export default function ReviewPage() {
           onSubmit={form.handleSubmit((v) => pay.mutate(v))}
         >
           <div>
-            <label className="text-sm">E-mail para receber o livro</label>
+            <label htmlFor="checkout-email" className="text-sm">
+              E-mail para o comprovante e o livro
+            </label>
+            <p className="mt-1 text-xs text-mist-dim">
+              O comprovante sai na hora. O livro chega neste endereço em alguns minutos, depois da
+              confecção.
+            </p>
             <input
+              id="checkout-email"
               type="email"
+              autoComplete="email"
               className="mt-1 w-full rounded-md border border-white/15 bg-ink-soft px-3 py-2"
               {...form.register('email')}
             />

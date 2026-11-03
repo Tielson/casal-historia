@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 export default function AnalyticsDocsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 text-mist">
-      <p className="font-display text-3xl text-champagne">Entre Nós</p>
+      <p className="text-3xl">
+        <Logo />
+      </p>
       <h1 className="mt-3 font-display text-3xl">Como ler Meta + funil interno</h1>
       <p className="mt-4 text-mist-dim">
         Use Events Manager (Pixel/CAPI) em paralelo com <code>/admin</code> ou{' '}

@@ -140,6 +140,29 @@ a {
   animation: heart-float 5.2s ease-in-out 0.8s infinite;
 }
 
+@keyframes wait-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wait-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.wait-spin {
+  animation: wait-spin 1.4s linear infinite;
+}
+
+.wait-shimmer {
+  animation: wait-slide 1.8s ease-in-out infinite;
+}
+
 .reveal {
   opacity: 0;
   transform: translateY(18px);
@@ -167,6 +190,8 @@ a {
   .animate-rise,
   .animate-rise-delay,
   .animate-rise-delay-2,
+  .wait-spin,
+  .wait-shimmer,
   .reveal,
   .reveal.is-visible {
     animation: none;

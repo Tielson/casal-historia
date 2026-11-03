@@ -1,16 +1,22 @@
 import type { BookPage, CastMember, LifePhase, StoryModeId, StyleId, TextZone } from '@entre-nos/shared';
 import { isYouthPhase } from './book-quality';
 
+/** Life events nobody told us about stay out of every book, adventure included. */
 const BASE_NEGATIVE = [
   'text, letters, typography, watermark, logo, signature, frame border, split screen, collage,',
   'extra fingers, deformed hands, extra limbs, duplicate faces, uncanny eyes,',
+  'wedding dress, bridal veil, engagement ring close-up, pregnancy, baby, small children,',
   'nsfw, erotic, violence, horror, gore',
 ].join(' ');
 
-/** Life events nobody told us about stay out of real and inspired books. */
-const UNTOLD_NEGATIVE = [
-  'wedding dress, bridal veil, engagement ring close-up, pregnancy, baby,',
-  'passport, airplane cabin, luxury yacht, invented landmarks',
+/** An adventure may travel; real and inspired books stay where the couple has been. */
+const TRAVEL_NEGATIVE = 'passport, airplane cabin, luxury yacht, invented landmarks';
+
+/** Photos win over any trait the story or the wish wrote down. */
+const PHOTO_IDENTITY = [
+  'Likeness: each person is the person in their own photo. Copy that face so they stay recognizable.',
+  "Skin tone comes only from that person's photo and stays exact: do not lighten, darken, warm, cool, or mix the two tones.",
+  'A written trait, wish, costume or age note may change clothes, hair length and how young they look. It never changes skin tone. If the text names a skin color, ignore it.',
 ].join(' ');
 
 export interface StylePack {
@@ -118,13 +124,13 @@ function characterLock(input: ScenePromptInput, phase: LifePhase | undefined): s
   const youth = isYouthPhase(phase);
   return [
     `Characters: ${nameA} and ${nameB}. The first image is the character sheet in this art style; the next references are photos of ${nameA}, then ${nameB}${input.hasTogether ? ', then the two together' : ''}.`,
-    'Keep each face, hair and build recognizable on every page.',
+    PHOTO_IDENTITY,
     `In this scene depict both at ${age}.`,
     youth
-      ? 'They are teenagers here: younger faces, teen proportions, age-appropriate casual clothes; a wholesome moment with no romantic physical contact.'
+      ? 'They are teenagers here. The references show them as adults today, so make both visibly younger: smooth teenage faces with no beard or stubble, slimmer teen builds, age-appropriate casual clothes, while keeping hair, skin tone and features recognizable. A wholesome moment with no romantic physical contact.'
       : '',
-    `${nameA}: ${lookOf(nameA, input.cast, phase) || 'as in the reference photo'}.`,
-    `${nameB}: ${lookOf(nameB, input.cast, phase) || 'as in the reference photo'}.`,
+    `${nameA}, clothes and age only: ${lookOf(nameA, input.cast, phase) || 'as in the reference photo'}.`,
+    `${nameB}, clothes and age only: ${lookOf(nameB, input.cast, phase) || 'as in the reference photo'}.`,
   ]
     .filter(Boolean)
     .join(' ');
@@ -150,7 +156,7 @@ export function buildScenePrompt(input: ScenePromptInput): string {
   const pack = stylePack(input.styleId);
   const visual = input.page.visual;
   const phase = input.phases.find((item) => item.id === visual.phase);
-  const negative = input.storyMode === 'adventure' ? BASE_NEGATIVE : `${BASE_NEGATIVE} ${UNTOLD_NEGATIVE}`;
+  const negative = input.storyMode === 'adventure' ? BASE_NEGATIVE : `${BASE_NEGATIVE}, ${TRAVEL_NEGATIVE}`;
   return [
     pack.positive,
     input.filmFinish ? FILM_FINISH_PROMPT : '',
@@ -160,7 +166,7 @@ export function buildScenePrompt(input: ScenePromptInput): string {
     `Action: ${visual.action}. Expression: ${visual.expression}.`,
     SHOT_PROMPT[visual.shot],
     stagingPrompt(input),
-    `Text area: ${ZONE_PROMPT[visual.textZone]} is a calm, low-detail continuation of the scene (sky, wall, floor, table, soft light) with no faces, hands or key objects, because text is laid over it later.`,
+    `Text area: compose so that ${ZONE_PROMPT[visual.textZone]} falls on a naturally quiet part of the scene (sky, wall, floor, table, soft light) with no faces, hands or key objects, because text is laid over it later. The scene keeps going there with the same style, texture and light: never a blank band, fog, blur or fade.`,
     'Full-bleed portrait page: the scene reaches every edge; keep faces away from the top and bottom 6%, which may be trimmed.',
     'Phone and laptop screens show only abstract shapes and bubbles, never readable text.',
     'Absolutely no text, letters, logos, watermarks, signatures, or page numbers.',
@@ -186,8 +192,9 @@ export function characterSheetPrompt(input: {
     `Character reference sheet of ${nameA} (first photo) and ${nameB} (second photo)${input.hasTogether ? '; the third photo shows them together' : ''}.`,
     'Each person appears full body, front view and three-quarter view, standing side by side on a plain light background.',
     'Translate their real faces, hair, skin tone and build into this art style so they stay recognizable.',
-    `${nameA}: ${lookOf(nameA, input.cast, undefined) || 'as in the photo'}.`,
-    `${nameB}: ${lookOf(nameB, input.cast, undefined) || 'as in the photo'}.`,
+    PHOTO_IDENTITY,
+    `${nameA}, clothes and age only: ${lookOf(nameA, input.cast, undefined) || 'as in the photo'}.`,
+    `${nameB}, clothes and age only: ${lookOf(nameB, input.cast, undefined) || 'as in the photo'}.`,
     'Neutral friendly expressions, everyday clothes. No scenery, no props.',
     'Absolutely no text, labels, names, letters or color swatches.',
     `Avoid: ${pack.negative}. ${BASE_NEGATIVE}`,

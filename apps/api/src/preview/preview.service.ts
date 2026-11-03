@@ -5,7 +5,14 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { StoryModeId } from '@entre-nos/shared';
+import {
+  DEFAULT_STYLE_ID,
+  PREVIEW_PAGES,
+  manuscriptSchema,
+  pageSceneKey,
+  type PageView,
+  type StoryModeId,
+} from '@entre-nos/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
 import { GenerationService } from '../generation/generation.service';
@@ -64,6 +71,7 @@ export class PreviewService implements OnModuleInit {
         manuscript: Prisma.DbNull,
         sceneKeys: Prisma.DbNull,
         imagesMock: false,
+        createdAt: new Date(),
       },
     });
 
@@ -95,7 +103,8 @@ export class PreviewService implements OnModuleInit {
         {
           nameA: draft.nameA ?? 'A',
           nameB: draft.nameB ?? 'B',
-          styleId: draft.styleId ?? 'editorial',
+          styleId: draft.styleId ?? DEFAULT_STYLE_ID,
+          filmFinish: draft.filmFinish,
           occasion: draft.occasion,
           startDate: draft.startDate,
           dedication: draft.dedication,
@@ -150,7 +159,26 @@ export class PreviewService implements OnModuleInit {
       where: { token },
       include: { preview: true },
     });
-    if (!draft?.preview) throw new NotFoundException('Prévia não encontrada');
+    if (!draft) throw new NotFoundException('Rascunho não encontrado');
+    if (!draft.preview) {
+      return {
+        id: null,
+        draftId: draft.id,
+        stage: 'missing',
+        coverUrl: null,
+        pageUrl: null,
+        coverText: null,
+        pageText: null,
+        pages: [],
+        title: null,
+        storyMode: draft.storyMode,
+        imagesMock: false,
+        error: null,
+        updatedAt: null,
+        startedAt: null,
+        maxRegens: config.maxPreviewRegens,
+      };
+    }
     return this.toPublic(draft.preview);
   }
 
@@ -178,11 +206,13 @@ export class PreviewService implements OnModuleInit {
     coverText: string | null;
     pageText: string | null;
     manuscript?: unknown;
+    sceneKeys?: unknown;
     imagesMock?: boolean;
     error: string | null;
+    createdAt: Date;
     updatedAt: Date;
   }) {
-    const manuscript = preview.manuscript as { storyMode?: string } | null;
+    const manuscript = preview.manuscript as { storyMode?: string; title?: string } | null;
     return {
       id: preview.id,
       draftId: preview.draftId,
@@ -195,11 +225,36 @@ export class PreviewService implements OnModuleInit {
         : null,
       coverText: preview.coverText,
       pageText: preview.pageText,
+      pages: await this.previewPages(preview.manuscript, preview.sceneKeys),
+      title: manuscript?.title ?? null,
       storyMode: manuscript?.storyMode ?? null,
       imagesMock: Boolean(preview.imagesMock),
       error: preview.error,
       updatedAt: preview.updatedAt.toISOString(),
+      startedAt: preview.createdAt.toISOString(),
       maxRegens: config.maxPreviewRegens,
     };
+  }
+
+  /** The cover and the pages that follow it, as the customer will see them in the book. */
+  private async previewPages(stored: unknown, storedKeys: unknown): Promise<PageView[]> {
+    const parsed = manuscriptSchema.safeParse(stored);
+    const keys = (storedKeys as Record<string, string> | null) ?? {};
+    if (!parsed.success) return [];
+    const pages: PageView[] = [];
+    for (const index of PREVIEW_PAGES) {
+      const page = parsed.data.pages.find((item) => item.index === index);
+      const key = keys[pageSceneKey(index)];
+      if (!page || !key) continue;
+      pages.push({
+        index,
+        url: await this.storage.getSignedGetUrl(key),
+        text: page.text,
+        dialogue: page.dialogue,
+        layout: page.layout,
+        textZone: page.visual.textZone,
+      });
+    }
+    return pages;
   }
 }

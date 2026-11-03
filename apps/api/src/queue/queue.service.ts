@@ -3,7 +3,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
 
-export type JobKind = 'preview' | 'production' | 'pdf' | 'email';
+export type JobKind = 'preview' | 'production' | 'pdf' | 'email' | 'receipt';
 
 export interface GenerationJobData {
   kind: JobKind;

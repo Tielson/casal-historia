@@ -4,20 +4,23 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { STYLES, styleSchema, type StyleForm } from '@entre-nos/shared';
+import {
+  DEFAULT_STYLE_ID,
+  FILM_FINISH,
+  STYLES,
+  STYLE_IDS,
+  styleSchema,
+  type StyleForm,
+} from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
+import { StyleSample } from '@/components/StyleSample';
 import { ensureDraft, patchDraft } from '@/lib/api';
 import { cacheDraft, draftSaveError, hrefAfterEdit, reachedPreview } from '@/lib/funnel';
 import { trackFunnel } from '@/lib/meta';
 
-const STYLE_PREVIEW: Record<string, string> = {
-  aquarela: '/cute/cute-couple-cover.jpg',
-  editorial: '/cute/editorial-intimo.jpg',
-  linha: '/cute/linha-contemporanea.jpg',
-  filme: '/cute/cute-rain-walk.jpg',
-  noturno: '/cute/noturno-sereno.jpg',
-  papel: '/cute/papel-artesanal.jpg',
-};
+function knownStyle(id: string | null | undefined): StyleForm['styleId'] {
+  return (STYLE_IDS as readonly string[]).includes(id ?? '') ? (id as StyleForm['styleId']) : DEFAULT_STYLE_ID;
+}
 
 export default function StylePage() {
   const router = useRouter();
@@ -26,7 +29,8 @@ export default function StylePage() {
   const form = useForm<StyleForm>({
     resolver: zodResolver(styleSchema),
     values: {
-      styleId: (draftQuery.data?.styleId as StyleForm['styleId']) ?? 'editorial',
+      styleId: knownStyle(draftQuery.data?.styleId),
+      filmFinish: Boolean(draftQuery.data?.filmFinish),
     },
   });
 
@@ -35,11 +39,12 @@ export default function StylePage() {
       const draft = draftQuery.data ?? (await ensureDraft());
       const updated = await patchDraft(draft.token, {
         styleId: values.styleId,
+        filmFinish: values.filmFinish,
         step: 'memories',
       });
       trackFunnel('style_chosen', {
         draftId: updated.id,
-        meta: { styleId: values.styleId },
+        meta: { styleId: values.styleId, filmFinish: values.filmFinish },
       });
       return updated;
     },
@@ -53,7 +58,7 @@ export default function StylePage() {
     <FunnelShell
       step={3}
       title="Escolham o estilo"
-      subtitle="Exemplos ilustrativos — pastéis, corações e doodles. Não são o livro final."
+      subtitle="O estilo muda a linguagem do livro inteiro: traço, cor e luz. Os exemplos são ilustrativos."
     >
       <form className="space-y-5" onSubmit={form.handleSubmit((v) => save.mutate(v))}>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -73,12 +78,7 @@ export default function StylePage() {
                   {...form.register('styleId')}
                 />
                 <div className="relative aspect-[3/4]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={STYLE_PREVIEW[style.id] ?? `/styles/${style.id}.svg`}
-                    alt={`Exemplo ${style.name}`}
-                    className="h-full w-full object-cover"
-                  />
+                  <StyleSample id={style.id} name={style.name} />
                   <span className="absolute left-2 top-2 bg-ink/70 px-2 py-0.5 text-[10px] uppercase tracking-wider text-champagne">
                     Exemplo
                   </span>
@@ -91,6 +91,13 @@ export default function StylePage() {
             );
           })}
         </div>
+        <label className="flex cursor-pointer items-start gap-3 rounded-sm border border-white/15 p-4">
+          <input type="checkbox" className="mt-1 h-4 w-4 accent-[var(--color-blush,#f2b6c1)]" {...form.register('filmFinish')} />
+          <span>
+            <span className="block text-sm font-semibold">{FILM_FINISH.name}</span>
+            <span className="mt-1 block text-xs text-mist-dim">{FILM_FINISH.description}</span>
+          </span>
+        </label>
         {save.isError ? (
           <p className="text-sm text-[var(--danger)]">{draftSaveError(save.error)}</p>
         ) : null}

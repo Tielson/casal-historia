@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Logo } from '@/components/Logo';
 import { api } from '@/lib/api';
 
 function buyerStatusLabel(status?: string) {
@@ -42,7 +43,9 @@ export default function ManageBookPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-mist">
-      <p className="font-display text-3xl text-champagne">Entre Nós</p>
+      <p className="text-3xl">
+        <Logo />
+      </p>
       <h1 className="mt-3 font-display text-3xl">{book?.names ?? 'Seu livro'}</h1>
       <p className="mt-2 text-sm text-mist-dim">
         Link do comprador · {buyerStatusLabel(book?.status)}

@@ -44,7 +44,7 @@ Devolva apenas JSON válido, sem markdown, neste formato:
     "expandable": ["o que o modo permite criar"]
   },
   "story": "o conto completo, em parágrafos separados por \\n\\n",
-  "cast": [{"name": "nome", "look": "traços físicos estáveis para a ilustração: cabelo, pele, olhos, porte, marcas, jeito de vestir"}],
+  "cast": [{"name": "nome", "look": "cabelo, olhos, porte, marcas e roupa. Sem cor de pele: a foto de cada um manda no tom"}],
   "phases": [{"id": "curto-sem-espaco", "label": "ex.: adolescência", "age": "ex.: 15 a 16 anos", "looks": {"nome": "como essa pessoa estava nessa fase"}}]
 }
 Regras do conto:
@@ -58,6 +58,7 @@ Regras do conto:
 - Se a história atravessa fases da vida (ex.: se conheceram adolescentes e se reencontraram adultos), registre cada fase em "phases", com a idade aproximada e a aparência de cada um naquela época. Cenas na adolescência são saudáveis e sem contato romântico.
 - Se eles se falam à distância (mensagens, redes, ligação), conte isso como distância: cada um no seu lugar.
 - Os nomes em "cast" e nas chaves de "looks" são exatamente os nomes do casal.
+- "look" e "looks" não trazem cor de pele nem etnia. Rosto e tom de pele de cada um são os da foto dessa pessoa, mesmo que o rumo ou as respostas descrevam outros traços. Roupa, comprimento de cabelo e idade da fase podem mudar.
 
 ${MODES}`;
 
@@ -107,8 +108,9 @@ Regras de cada página:
 - Use pelo menos uma página "impact" e uma "dialogue".
 - Corte reflexões repetidas: o texto mostra ação, sensação e fala. No máximo uma reflexão sobre o tempo no livro inteiro.
 - Não repita frases do conto em duas páginas e não cole as respostas.
+- Modo "real": só acontecimentos informados. Modo "inspired": a capa ou a página 2 diz, com a palavra "inspirada", que a história é inspirada neles. Modo "adventure": a capa ou a página 2 diz que é uma aventura inventada.
 Roteiro visual:
-- "phase" diz a idade e a aparência dos dois naquela cena. Adolescentes aparecem como adolescentes, sem contato romântico.
+- "phase" diz a idade e a aparência dos dois naquela cena. Adolescentes aparecem como adolescentes, sem contato romântico. "wardrobe" é só roupa e acessório: não muda cor de pele, rosto nem a cor do cabelo, que vêm da foto de cada um.
 - "staging": "together" quando os dois estão no mesmo lugar; "apart" quando cada um está no seu ambiente (ex.: conversa por mensagem); "solo_a" só o primeiro nome do elenco; "solo_b" só o segundo; "detail" um objeto ou gesto em close (celular, mãos, bilhete). Conversa à distância nunca é "together".
 - Varie o enquadramento: "wide" para apresentar um lugar, "medium" para conversa, "close" para emoção, "detail" para objeto ou gesto. Use pelo menos três tipos e evite retratos posados: mostre os dois vivendo a cena (chegando, conversando, esperando, reconhecendo).
 - Duas páginas seguidas mudam pelo menos duas coisas entre lugar, enquadramento, quem aparece e momento.
@@ -186,7 +188,7 @@ function critiqueBook(manuscript: Manuscript, input: AuthorInput): string[] {
       phases: manuscript.phases,
     }).reasons,
     ...manuscript.pages
-      .filter((page) => !textFits(page))
+      .filter((page) => !textFits(page, page.role === 'cover' ? manuscript.title : ''))
       .map((page) => `O texto da página ${page.index} não cabe na zona ${page.visual.textZone}; encurte.`),
   ];
 }

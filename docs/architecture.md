@@ -2,7 +2,7 @@
 
 ## Overview
 
-Digital personalized couple book MVP. Visitor creates an anonymous draft, uploads photos, picks one of six styles, answers three memory questions, reviews a free preview (cover + 1 inner page), pays R$ 49,90 via Stripe, then receives a 12-page PDF with manage + gift links.
+Digital personalized couple book MVP. Visitor creates an anonymous draft, uploads photos, picks one of six styles (plus an optional old-film finish), answers three memory questions, reviews a free preview (cover + pages 2–4 in sequence), pays R$ 49,90 via Stripe, then receives a 12-page PDF with manage + gift links.
 
 ## Monorepo
 
@@ -19,7 +19,7 @@ docker-compose.yml  postgres + redis + minio
 - **Preview** — generation stage + cover/page asset keys + templated text
 - **Order** — server price (`amountCents=4990`, `brl`), Stripe ids, production stage, PDF key, `manageToken`, `giftToken` (revocable)
 - **Payment** — webhook idempotency via unique `stripeEventId`
-- **GenerationJob** — preview | production | pdf | email
+- **GenerationJob** — preview | production | pdf | receipt | email
 - **FunnelEvent** — internal analytics
 
 ## Flow
@@ -29,9 +29,33 @@ docker-compose.yml  postgres + redis + minio
 3. Preview job (BullMQ or in-memory): writing → illustrating → layout → ready
 4. Approval freezes preview assets for the order
 5. Checkout session created server-side; cancel returns to `/criar/revisao?canceled=1`
-6. Webhook (or mock-pay) validates amount/currency/status → idempotent production
-7. Remaining pages generated, PDF assembled (pdfkit), email stub/Resend
+6. Webhook (or mock-pay) validates amount/currency/status → payment receipt email, then idempotent production
+7. Remaining pages generated, PDF assembled (pdfkit), delivery email via Zoho SMTP (log stub if SMTP is empty)
 8. Buyer manage link vs gift read-only opaque link (`noindex`)
+
+## The book
+
+A book is 12 illustrated scenes, one illustration per page. Generation runs in this order:
+
+1. **Story** (`STORY_SYSTEM`, `generation/manuscript-author.ts`). The text model writes the whole tale first, plus `cast` (each person's stable look) and `phases` (each life phase with age and look, e.g. adolescência / hoje). `assessStory` checks length, links to the answers, and repeated reflections about time.
+2. **Storyboard** (`STORYBOARD_SYSTEM`). The tale is split into 12 pages. Each page has:
+   - a `layout`: `scene` (35–70 words), `dialogue` (narration plus up to 3 short lines) or `impact` (one short sentence);
+   - a `beat`: what happens, what changed, why the next page follows, and what only the image shows;
+   - a `visual` script: phase, staging (`together` / `apart` / `solo_a` / `solo_b` / `detail`), wardrobe, place, time, action, expression, shot, `textZone`, and `linkToNext`.
+
+   Interior pages have no titles. `assessManuscript` rejects:
+   - neighboring pages with the same event or nearly the same picture;
+   - three text zones in a row;
+   - romance in a teenage phase;
+   - a conversation at a distance drawn with the couple together.
+3. **Character sheet** (`cast.jpg`). Both people are drawn once in the chosen style from the photos. Every page receives the sheet plus the photos as references.
+4. **Pages** (`p01`…`p12`). Prompts come from `generation/style-packs.ts`: style pack, optional film finish, the age for that phase, framing by shot, staging, and a calm area at `textZone`. Images are drawn at 2:3 and trimmed to 3:4.
+5. **Layout** (`production/pdf-layout.ts`, `pdf.service.ts`):
+   - 21 × 28 cm pages, the illustration full bleed;
+   - the text is set in Lora inside the reserved zone, over a soft veil that fades into the scene;
+   - the veil turns dark, with light text, when the zone is dark.
+
+The preview renders the character sheet plus pages 1–4. Production renders 5–12 from the same sheet. `scripts/style-samples.ts` generates the style-card examples in `apps/web/public/styles`.
 
 ## Security / product rules
 

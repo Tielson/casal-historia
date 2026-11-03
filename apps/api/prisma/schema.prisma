@@ -94,6 +94,8 @@ model Order {
   giftRevoked     Boolean   @default(false)
   notes           String?
   paidAt          DateTime?
+  /// Set after the payment receipt email is sent. Webhook retries skip a second send.
+  receiptSentAt   DateTime?
   deliveredAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

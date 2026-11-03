@@ -9,16 +9,17 @@ import { GenerationService } from '../generation/generation.service';
 import { StorageService } from '../storage/storage.service';
 import { PdfService } from './pdf.service';
 import { EmailService } from './email.service';
+import { coverKeyOf } from '../mail/mail.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { QueueService } from '../queue/queue.service';
 import { Prisma } from '@prisma/client';
-import { manuscriptSchema, type StoryModeId } from '@entre-nos/shared';
+import { DEFAULT_STYLE_ID, manuscriptSchema, pageSceneKey, type StoryModeId } from '@entre-nos/shared';
 import { config } from '../config';
 import {
-  APPROVED_LIMITS,
   assessImages,
   assessManuscript,
   DeliveryBlocked,
+  pageCopy,
 } from '../generation/book-quality';
 import { textFits } from './pdf-layout';
 
@@ -79,7 +80,8 @@ export class ProductionService implements OnModuleInit {
       const input = {
         nameA: draft.nameA ?? 'A',
         nameB: draft.nameB ?? 'B',
-        styleId: draft.styleId ?? 'editorial',
+        styleId: draft.styleId ?? DEFAULT_STYLE_ID,
+        filmFinish: draft.filmFinish,
         occasion: draft.occasion,
         startDate: draft.startDate,
         dedication: draft.dedication,
@@ -110,15 +112,7 @@ export class ProductionService implements OnModuleInit {
         },
       });
 
-      const pages = [...manuscript.pages]
-        .sort((a, b) => a.index - b.index)
-        .map((page) => {
-          const imageKey = illustrated.sceneKeys[page.sceneId];
-          if (!imageKey) {
-            throw new DeliveryBlocked([`Imagem obrigatória ausente: ${page.sceneId}.`]);
-          }
-          return page;
-        });
+      const pages = [...manuscript.pages].sort((a, b) => a.index - b.index);
 
       const reasons = [
         ...assessManuscript({
@@ -126,17 +120,15 @@ export class ProductionService implements OnModuleInit {
           answers,
           storyMode,
           thread: manuscript.thread,
-          limits: APPROVED_LIMITS,
+          phases: manuscript.phases,
         }).reasons,
         ...assessImages({
-          scenes: manuscript.scenes.map((scene) => ({
-            id: scene.id,
-            placeholder: illustrated.imagesMock,
-          })),
+          sceneKeys: illustrated.sceneKeys,
+          placeholder: illustrated.imagesMock,
           allowPlaceholder: config.mockGeneration,
         }).reasons,
         ...pages
-          .filter((page) => !textFits(page.title, page.body, page.index))
+          .filter((page) => !textFits(page, page.role === 'cover' ? manuscript.title : ''))
           .map((page) => `Texto cortado na página ${page.index}.`),
       ];
       if (reasons.length) throw new DeliveryBlocked(reasons);
@@ -146,24 +138,26 @@ export class ProductionService implements OnModuleInit {
         data: { productionStage: 'pdf' },
       });
       const pdfPages = pages.map((page) => ({
-        index: page.index,
-        title: page.title,
-        body: page.body,
-        imageKey: illustrated.sceneKeys[page.sceneId],
+        page,
+        imageKey: illustrated.sceneKeys[pageSceneKey(page.index)],
       }));
-      const pdfKey = await this.pdf.assemble(orderId, pdfPages);
+      const pdfKey = await this.pdf.assemble(orderId, {
+        title: manuscript.title,
+        styleId: input.styleId,
+        pages: pdfPages,
+      });
 
       await this.prisma.deliverable.deleteMany({ where: { orderId } });
-      for (const page of pdfPages) {
+      for (const { page, imageKey } of pdfPages) {
         await this.prisma.deliverable.create({
           data: {
             orderId,
             kind: 'page',
-            storageKey: page.imageKey,
+            storageKey: imageKey,
             pageIndex: page.index,
             mimeType: 'image/jpeg',
-            title: page.title,
-            body: page.body,
+            title: page.role === 'cover' ? manuscript.title : null,
+            body: pageCopy(page),
           },
         });
       }
@@ -225,18 +219,20 @@ export class ProductionService implements OnModuleInit {
   async sendAccessEmail(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { draft: true },
+      include: { draft: { include: { preview: true } } },
     });
     if (!order || order.status !== 'delivered' || !order.pdfKey) {
       return { ok: false, reason: 'not_delivered' };
     }
     const to = order.email ?? order.draft.email;
     if (!to) return { ok: false, reason: 'no_email' };
+    const names = [order.draft.nameA, order.draft.nameB].filter(Boolean).join(' & ');
     return this.email.sendBookReady({
       to,
-      names: `${order.draft.nameA ?? ''} & ${order.draft.nameB ?? ''}`,
+      names: names || 'vocês',
       manageUrl: `${config.webUrl}/livro/${order.manageToken}`,
       giftUrl: `${config.webUrl}/presente/${order.giftToken}`,
+      coverKey: coverKeyOf(order.draft.preview),
     });
   }
 

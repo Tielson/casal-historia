@@ -299,7 +299,7 @@ export function assessManuscript(input: {
     const before = pages[i - 1];
     const page = pages[i];
     const events = [contentTokens(before.beat.event), contentTokens(page.beat.event)];
-    if (events[0].length >= 3 && events[1].length >= 3 && jaccard(events[0], events[1]) >= 0.6) {
+    if (events[0].length >= 2 && events[1].length >= 2 && jaccard(events[0], events[1]) >= 0.6) {
       reasons.push(
         `As páginas ${before.index} e ${page.index} mostram o mesmo acontecimento; a segunda precisa fazer a história avançar.`,
       );
@@ -340,10 +340,10 @@ export function assessManuscript(input: {
   reasons.push(...answerLinks(corpus, input.answers));
 
   if (input.storyMode === 'inspired' && !/inspirad/.test(foldedCorpus)) {
-    reasons.push('O modo inspirado não aparece na história.');
+    reasons.push('O modo inspirado não aparece na história: diga na capa ou na página 2, com a palavra "inspirada", que a história é inspirada neles.');
   }
   if (input.storyMode === 'adventure' && !/fictici|inventad|aventura/.test(foldedCorpus)) {
-    reasons.push('A aventura fictícia não fica declarada na história.');
+    reasons.push('A aventura fictícia não fica declarada: diga na capa ou na página 2 que é uma aventura inventada.');
   }
   if (input.storyMode === 'real' && /historia ficticia|aventura inventada/.test(foldedCorpus)) {
     reasons.push('O modo real conta uma história fora dos fatos.');

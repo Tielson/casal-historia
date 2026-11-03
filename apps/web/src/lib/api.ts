@@ -46,6 +46,7 @@ export type Draft = {
     photoConsent?: boolean;
   } | null;
   styleId?: string | null;
+  filmFinish?: boolean;
   storyMode?: string | null;
   memories?: {
     answers?: Record<string, string>;

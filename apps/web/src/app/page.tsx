@@ -2,7 +2,9 @@ import Link from 'next/link';
 import { STYLES, PRICE_LABEL } from '@entre-nos/shared';
 import { StickyMobileCta } from '@/components/StickyMobileCta';
 import { LandingViewContent } from '@/components/LandingViewContent';
+import { Logo } from '@/components/Logo';
 import { Reveal } from '@/components/Reveal';
+import { StyleSample } from '@/components/StyleSample';
 
 const faqs = [
   {
@@ -26,15 +28,6 @@ const faqs = [
     a: 'Não. Seu rascunho fica salvo anonimamente enquanto você avança — inclusive se voltar do Stripe.',
   },
 ];
-
-const STYLE_PREVIEW: Record<string, string> = {
-  aquarela: '/cute/cute-couple-cover.jpg',
-  editorial: '/cute/editorial-intimo.jpg',
-  linha: '/cute/linha-contemporanea.jpg',
-  filme: '/cute/cute-rain-walk.jpg',
-  noturno: '/cute/noturno-sereno.jpg',
-  papel: '/cute/papel-artesanal.jpg',
-};
 
 export default function LandingPage() {
   return (
@@ -66,8 +59,8 @@ export default function LandingPage() {
           className="heart-float-delay pointer-events-none absolute bottom-[18%] left-[-8%] z-[1] w-[min(55vw,280px)] opacity-50 md:opacity-70"
         />
         <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-6 pb-28 pt-10 md:justify-center md:pb-20">
-          <p className="animate-rise font-display text-5xl leading-none text-champagne sm:text-6xl md:text-7xl lg:text-8xl">
-            Entre Nós
+          <p className="animate-rise text-5xl leading-none sm:text-6xl md:text-7xl lg:text-8xl">
+            <Logo />
           </p>
           <h1 className="animate-rise-delay mt-6 max-w-xl font-display text-3xl leading-tight text-mist sm:text-4xl md:text-5xl">
             O livro da história de vocês — digital, carinhoso, só de vocês.
@@ -97,7 +90,7 @@ export default function LandingPage() {
       <section id="como-fica" className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <Reveal>
           <h2 className="max-w-2xl font-display text-3xl text-mist md:text-4xl">
-            Seis estilos. O mesmo casal, a mesma cena — agora com um ar mais fofo.
+            Seis estilos. Do traço delicado ao cinema, o mesmo casal em cada página.
           </h2>
           <p className="mt-4 max-w-xl text-mist-dim">
             As imagens abaixo são exemplos ilustrativos do visual de cada estilo, não o
@@ -108,11 +101,10 @@ export default function LandingPage() {
           {STYLES.map((style, index) => (
             <Reveal as="figure" key={style.id} delay={index * 80} className="group">
               <div className="relative aspect-[3/4] overflow-hidden rounded-sm bg-ink-soft ring-1 ring-blush-soft/20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={STYLE_PREVIEW[style.id] ?? `/styles/${style.id}.svg`}
-                  alt={`Exemplo do estilo ${style.name}`}
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                <StyleSample
+                  id={style.id}
+                  name={style.name}
+                  className="transition duration-700 group-hover:scale-[1.03]"
                 />
                 <span className="absolute left-3 top-3 rounded-sm bg-ink/70 px-2 py-1 text-[10px] uppercase tracking-wider text-champagne">
                   Exemplo
