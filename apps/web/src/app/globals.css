@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #10181c;
-  --ink-soft: #1c2a31;
-  --mist: #e7eef2;
-  --mist-dim: #c5d2d9;
-  --champagne: #d7c4a3;
+  --ink: #1a1214;
+  --ink-soft: #2c1e24;
+  --mist: #fff4f2;
+  --mist-dim: #e7cfd4;
+  --champagne: #f6d7a8;
   --copper: #c27a4f;
-  --sea: #3d6b78;
-  --foam: #8fb6bf;
-  --paper: #f4f0ea;
+  --blush: #e07a8c;
+  --blush-soft: #f4b7c3;
+  --peach: #f7d0d8;
+  --sea: #6b4a62;
+  --foam: #e8a0ae;
+  --paper: #fff8f2;
   --danger: #b44a3c;
   --background: var(--ink);
   --foreground: var(--mist);
@@ -26,6 +29,9 @@
   --color-mist-dim: var(--mist-dim);
   --color-champagne: var(--champagne);
   --color-copper: var(--copper);
+  --color-blush: var(--blush);
+  --color-blush-soft: var(--blush-soft);
+  --color-peach: var(--peach);
   --color-sea: var(--sea);
   --color-foam: var(--foam);
   --color-paper: var(--paper);
@@ -64,7 +70,7 @@ a {
 }
 
 ::selection {
-  background: color-mix(in oklab, var(--copper) 55%, transparent);
+  background: color-mix(in oklab, var(--blush) 55%, transparent);
   color: white;
 }
 
@@ -85,6 +91,18 @@ a {
   }
   to {
     transform: translate3d(-2%, 1.5%, 0) scale(1.04);
+  }
+}
+
+@keyframes heart-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+    opacity: 0.95;
   }
 }
 
@@ -114,6 +132,47 @@ a {
   animation: drift 18s ease-in-out infinite alternate;
 }
 
+.heart-float {
+  animation: heart-float 4.5s ease-in-out infinite;
+}
+
+.heart-float-delay {
+  animation: heart-float 5.2s ease-in-out 0.8s infinite;
+}
+
+@keyframes wait-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes wait-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.wait-spin {
+  animation: wait-spin 1.4s linear infinite;
+}
+
+.wait-shimmer {
+  animation: wait-slide 1.8s ease-in-out infinite;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+}
+
+.reveal.is-visible {
+  animation: rise 0.9s ease both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
 .sticky-cta-pad {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
@@ -121,5 +180,25 @@ a {
 @media (min-width: 768px) {
   .sticky-cta-pad {
     padding-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-drift,
+  .heart-float,
+  .heart-float-delay,
+  .animate-rise,
+  .animate-rise-delay,
+  .animate-rise-delay-2,
+  .wait-spin,
+  .wait-shimmer,
+  .reveal,
+  .reveal.is-visible {
+    animation: none;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
   }
 }

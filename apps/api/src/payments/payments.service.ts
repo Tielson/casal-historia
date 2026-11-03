@@ -109,9 +109,11 @@ export class PaymentsService {
       };
     }
 
+    const customerEmail = email ?? draft.email ?? undefined;
     const session = await this.stripe.checkout.sessions.create({
       mode: 'payment',
-      customer_email: email ?? draft.email ?? undefined,
+      customer_email: customerEmail,
+      payment_intent_data: customerEmail ? { receipt_email: customerEmail } : undefined,
       line_items: [
         {
           quantity: 1,
@@ -119,8 +121,8 @@ export class PaymentsService {
             currency,
             unit_amount: amount,
             product_data: {
-              name: 'Entre Nós — livro digital personalizado',
-              description: '12 páginas digitais com prévia aprovada',
+              name: `${config.appName} — livro digital personalizado`,
+              description: `12 páginas digitais com prévia aprovada. Um produto ${config.companyName}.`,
             },
           },
         },
@@ -158,6 +160,7 @@ export class PaymentsService {
       stripePaymentId: `mock_pi_${order.id}`,
       amountCents: order.amountCents,
       currency: order.currency,
+      rawType: 'mock',
     });
   }
 
@@ -177,7 +180,15 @@ export class PaymentsService {
       throw new BadRequestException('Assinatura inválida');
     }
 
-    if (event.type !== 'checkout.session.completed') {
+    const fulfillmentEvents = new Set([
+      'checkout.session.completed',
+      'checkout.session.async_payment_succeeded',
+    ]);
+    if (event.type === 'checkout.session.async_payment_failed') {
+      this.logger.warn(`Pagamento assíncrono falhou: ${event.id}`);
+      return { received: true, failed: true };
+    }
+    if (!fulfillmentEvents.has(event.type)) {
       return { received: true, ignored: event.type };
     }
 
@@ -207,6 +218,7 @@ export class PaymentsService {
       amountCents: amount,
       currency,
       email: session.customer_details?.email ?? session.customer_email,
+      rawType: event.type,
     });
   }
 
@@ -218,11 +230,13 @@ export class PaymentsService {
     amountCents: number;
     currency: string;
     email?: string | null;
+    rawType: string;
   }) {
     const existing = await this.prisma.payment.findUnique({
       where: { stripeEventId: input.stripeEventId },
     });
     if (existing) {
+      await this.queue.enqueue({ kind: 'receipt', orderId: existing.orderId });
       return { ok: true, idempotent: true, orderId: existing.orderId };
     }
 
@@ -244,11 +258,12 @@ export class PaymentsService {
         amountCents: input.amountCents,
         currency: input.currency,
         status: 'paid',
-        rawType: 'checkout.session.completed',
+        rawType: input.rawType,
       },
     });
 
     if (order.status === 'paid' || order.status === 'producing' || order.status === 'delivered') {
+      await this.queue.enqueue({ kind: 'receipt', orderId: order.id });
       return { ok: true, idempotent: true, orderId: order.id };
     }
 
@@ -283,7 +298,7 @@ export class PaymentsService {
       orderId: order.id,
     });
 
-    // Idempotent production trigger
+    await this.queue.enqueue({ kind: 'receipt', orderId: order.id });
     await this.queue.enqueue({ kind: 'production', orderId: order.id });
 
     return { ok: true, orderId: order.id };

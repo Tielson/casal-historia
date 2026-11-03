@@ -3,13 +3,15 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OCCASIONS, occasionSchema, type OccasionForm } from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
 import { ensureDraft, patchDraft } from '@/lib/api';
+import { cacheDraft, draftSaveError, hrefAfterEdit, reachedPreview } from '@/lib/funnel';
 
 export default function OccasionPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const draftQuery = useQuery({ queryKey: ['draft'], queryFn: ensureDraft });
   const form = useForm<OccasionForm>({
     resolver: zodResolver(occasionSchema),
@@ -23,7 +25,10 @@ export default function OccasionPage() {
       const draft = draftQuery.data ?? (await ensureDraft());
       return patchDraft(draft.token, { occasion: values.occasion, step: 'couple' });
     },
-    onSuccess: () => router.push('/criar/casal'),
+    onSuccess: (updated) => {
+      cacheDraft(queryClient, updated);
+      router.push(hrefAfterEdit(draftQuery.data?.step, '/criar/casal'));
+    },
   });
 
   return (
@@ -42,9 +47,9 @@ export default function OccasionPage() {
             return (
               <label
                 key={o.id}
-                className={`cursor-pointer rounded-sm border px-4 py-5 transition ${
+                className={`cursor-pointer rounded-sm border-2 px-4 py-5 transition ${
                   selected
-                    ? 'border-champagne bg-champagne/10'
+                    ? 'border-blush bg-blush/15'
                     : 'border-white/15 hover:border-white/30'
                 }`}
               >
@@ -65,12 +70,15 @@ export default function OccasionPage() {
             {form.formState.errors.occasion.message}
           </p>
         ) : null}
+        {save.isError ? (
+          <p className="text-sm text-[var(--danger)]">{draftSaveError(save.error)}</p>
+        ) : null}
         <button
           type="submit"
           disabled={save.isPending}
           className="mt-4 rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink disabled:opacity-60"
         >
-          Continuar
+          {reachedPreview(draftQuery.data?.step) ? 'Salvar e voltar à prévia' : 'Continuar'}
         </button>
       </form>
     </FunnelShell>

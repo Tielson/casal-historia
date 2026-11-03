@@ -3,15 +3,17 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { coupleSchema, type CoupleForm } from '@entre-nos/shared';
 import { FunnelShell } from '@/components/FunnelShell';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { ensureDraft, patchDraft } from '@/lib/api';
+import { cacheDraft, draftSaveError, hrefAfterEdit, reachedPreview } from '@/lib/funnel';
 import { trackFunnel } from '@/lib/meta';
 
 export default function CouplePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const draftQuery = useQuery({ queryKey: ['draft'], queryFn: ensureDraft });
   const draft = draftQuery.data;
 
@@ -38,7 +40,10 @@ export default function CouplePage() {
       trackFunnel('photos_uploaded', { draftId: updated.id });
       return updated;
     },
-    onSuccess: () => router.push('/criar/estilo'),
+    onSuccess: (updated) => {
+      cacheDraft(queryClient, updated);
+      router.push(hrefAfterEdit(draftQuery.data?.step, '/criar/estilo'));
+    },
   });
 
   if (!draft) {
@@ -149,8 +154,11 @@ export default function CouplePage() {
         ) : null}
         {form.formState.errors.photoAKey || form.formState.errors.photoBKey ? (
           <p className="text-xs text-[var(--danger)]">
-            Envie e confirme as duas fotos obrigatórias.
+            Envie as duas fotos obrigatórias.
           </p>
+        ) : null}
+        {save.isError ? (
+          <p className="text-sm text-[var(--danger)]">{draftSaveError(save.error)}</p>
         ) : null}
 
         <button
@@ -158,7 +166,7 @@ export default function CouplePage() {
           disabled={save.isPending}
           className="rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink"
         >
-          Escolher nosso estilo
+          {reachedPreview(draftQuery.data?.step) ? 'Salvar e voltar à prévia' : 'Escolher nosso estilo'}
         </button>
       </form>
     </FunnelShell>

@@ -1,17 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#6b4a35"/>
-      <stop offset="100%" stop-color="#10141a"/>
+      <stop offset="0%" stop-color="#f0c9b0"/>
+      <stop offset="45%" stop-color="#d9928a"/>
+      <stop offset="100%" stop-color="#3a2a2e"/>
     </linearGradient>
   </defs>
   <rect width="900" height="1200" fill="url(#g)"/>
-  <circle cx="680" cy="220" r="140" fill="#efe0c8" fill-opacity="0.1"/>
-  <circle cx="180" cy="980" r="200" fill="#efe0c8" fill-opacity="0.08"/>
-  <text x="60" y="90" fill="#efe0c8" font-size="22" font-family="Georgia, serif" opacity="0.7">Exemplo · mesmo casal</text>
-  <text x="60" y="560" fill="#efe0c8" font-size="48" font-family="Georgia, serif">Filme antigo</text>
-  <text x="60" y="620" fill="#efe0c8" font-size="24" font-family="Georgia, serif" opacity="0.85">Cena compartilhada de comparação</text>
-  <rect x="60" y="700" width="320" height="220" rx="4" fill="#efe0c8" fill-opacity="0.12" stroke="#efe0c8" stroke-opacity="0.35"/>
-  <circle cx="170" cy="800" r="42" fill="#efe0c8" fill-opacity="0.25"/>
-  <circle cx="250" cy="800" r="42" fill="#efe0c8" fill-opacity="0.2"/>
+  <circle cx="680" cy="220" r="140" fill="#ffe8d6" fill-opacity="0.22"/>
+  <g fill="#ffe8ee" fill-opacity="0.55">
+    <path d="M140 180c0-12 10-22 22-22 8 0 15 4 19 10 4-6 11-10 19-10 12 0 22 10 22 22 0 28-41 52-41 52S140 208 140 180z"/>
+    <path d="M760 480c0-9 7-16 16-16 6 0 11 3 14 7 3-4 8-7 14-7 9 0 16 7 16 16 0 20-30 38-30 38s-30-18-30-38z"/>
+    <path d="M820 200c0-7 5-12 12-12 4 0 8 2 10 5 2-3 6-5 10-5 7 0 12 5 12 12 0 15-22 28-22 28S820 215 820 200z"/>
+  </g>
+  <!-- grainy warm lamp hint -->
+  <circle cx="720" cy="320" r="40" fill="#ffd9a8" fill-opacity="0.35"/>
+  <text x="60" y="90" fill="#fff5f0" font-size="22" font-family="Georgia, serif" opacity="0.75">Exemplo · mesmo casal</text>
+  <circle cx="200" cy="790" r="48" fill="#fff5f0" fill-opacity="0.22"/>
+  <circle cx="270" cy="790" r="48" fill="#fff5f0" fill-opacity="0.18"/>
+  <ellipse cx="235" cy="870" rx="100" ry="72" fill="#fff5f0" fill-opacity="0.12"/>
+  <text x="60" y="560" fill="#fff5f0" font-size="48" font-family="Georgia, serif">Filme antigo</text>
+  <text x="60" y="620" fill="#fff5f0" font-size="24" font-family="Georgia, serif" opacity="0.85">Tons quentes, chuva de corações</text>
 </svg>

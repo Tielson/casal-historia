@@ -1,9 +1,8 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { Logo } from '@/components/Logo';
 import { api } from '@/lib/api';
 import { trackFunnel, trackMeta } from '@/lib/meta';
 
@@ -11,18 +10,15 @@ function SuccessInner() {
   const params = useSearchParams();
   const orderId = params.get('orderId');
   const mock = params.get('mock') === '1';
-  const [paidMock, setPaidMock] = useState(false);
+  const [paidMock, setPaidMock] = useState(!mock);
 
   useEffect(() => {
-    if (!orderId) return;
-    if (mock && !paidMock) {
-      void api.post(`/payments/mock-pay/${orderId}`).then(() => setPaidMock(true));
-    }
-  }, [orderId, mock, paidMock]);
+    if (!orderId || !mock) return;
+    void api.post(`/payments/mock-pay/${orderId}`).then(() => setPaidMock(true));
+  }, [orderId, mock]);
 
   useEffect(() => {
-    if (!orderId) return;
-    if (mock && !paidMock) return;
+    if (!orderId || !paidMock) return;
     trackFunnel('payment', { orderId });
     trackMeta(
       'Purchase',
@@ -34,49 +30,23 @@ function SuccessInner() {
       },
       `Purchase_${orderId}`,
     );
-  }, [orderId, mock, paidMock]);
+  }, [orderId, paidMock]);
 
-  const statusQuery = useQuery({
-    queryKey: ['order-status', orderId, paidMock],
-    enabled: Boolean(orderId) && (!mock || paidMock),
-    queryFn: async () => {
-      const { data } = await api.get<{
-        status: string;
-        productionStage?: string;
-        manageToken: string;
-      }>(`/orders/${orderId}/status`);
-      return data;
-    },
-    refetchInterval: (q) =>
-      q.state.data?.status === 'delivered' ? false : 1200,
-  });
-
-  const status = statusQuery.data?.status;
-  const ready = status === 'delivered';
+  const waiting = mock && !paidMock;
 
   return (
     <main className="mx-auto flex min-h-[100svh] max-w-xl flex-col justify-center px-6 py-16 text-mist">
-      <p className="font-display text-4xl text-champagne">Entre Nós</p>
-      <h1 className="mt-4 font-display text-3xl">
-        {ready ? 'Seu livro está pronto' : 'Pagamento confirmado'}
-      </h1>
-      <p className="mt-3 text-mist-dim">
-        {ready
-          ? 'A produção terminou. Abra o livro no link de gerenciamento.'
-          : `Estamos gerando as páginas restantes… (${statusQuery.data?.productionStage ?? 'iniciando'})`}
+      <p className="text-4xl">
+        <Logo />
       </p>
-      {ready && statusQuery.data?.manageToken ? (
-        <Link
-          href={`/livro/${statusQuery.data.manageToken}`}
-          className="mt-8 inline-flex w-fit rounded-md bg-champagne px-5 py-3 text-sm font-semibold text-ink"
-        >
-          Abrir nosso livro
-        </Link>
-      ) : (
-        <div className="mt-8 h-2 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-1/2 animate-pulse bg-champagne/80" />
-        </div>
-      )}
+      <h1 className="mt-4 font-display text-3xl">Pagamento confirmado</h1>
+      <p className="mt-3 text-mist-dim">
+        {!orderId
+          ? 'Não encontramos este pagamento.'
+          : waiting
+            ? 'Confirmando o pagamento…'
+            : 'Enviamos o comprovante para o e-mail informado na revisão. O livro está sendo confeccionado e chega nesse e-mail em alguns minutos.'}
+      </p>
       {mock ? (
         <p className="mt-6 text-xs text-mist-dim">
           Modo mock Stripe (sem chave). O pagamento foi simulado no servidor.

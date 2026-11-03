@@ -2,7 +2,18 @@
 
 import { useParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Logo } from '@/components/Logo';
 import { api } from '@/lib/api';
+
+function buyerStatusLabel(status?: string) {
+  if (status === 'delivered') return 'entregue';
+  if (status === 'producing' || status === 'paid') return 'em produção';
+  if (status === 'needs_review') return 'em revisão';
+  if (status === 'refunded') return 'reembolsado';
+  if (status === 'cancelled') return 'cancelado';
+  if (status === 'pending_payment') return 'aguardando pagamento';
+  return status ?? '…';
+}
 
 export default function ManageBookPage() {
   const params = useParams<{ token: string }>();
@@ -32,9 +43,19 @@ export default function ManageBookPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-mist">
-      <p className="font-display text-3xl text-champagne">Entre Nós</p>
+      <p className="text-3xl">
+        <Logo />
+      </p>
       <h1 className="mt-3 font-display text-3xl">{book?.names ?? 'Seu livro'}</h1>
-      <p className="mt-2 text-sm text-mist-dim">Link do comprador · status: {book?.status}</p>
+      <p className="mt-2 text-sm text-mist-dim">
+        Link do comprador · {buyerStatusLabel(book?.status)}
+      </p>
+      {book?.status === 'needs_review' ? (
+        <p className="mt-4 text-sm text-mist">
+          O livro ainda não foi concluído. A entrega espera uma nova geração, sem mandar um PDF
+          incompleto.
+        </p>
+      ) : null}
       {book?.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={book.coverUrl} alt="" className="mt-8 w-full max-w-md rounded-sm" />

@@ -1,17 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1d1d1d"/>
-      <stop offset="100%" stop-color="#10141a"/>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff5f7"/>
+      <stop offset="100%" stop-color="#2a1f24"/>
     </linearGradient>
   </defs>
   <rect width="900" height="1200" fill="url(#g)"/>
-  <circle cx="680" cy="220" r="140" fill="#f5f5f0" fill-opacity="0.1"/>
-  <circle cx="180" cy="980" r="200" fill="#f5f5f0" fill-opacity="0.08"/>
-  <text x="60" y="90" fill="#f5f5f0" font-size="22" font-family="Georgia, serif" opacity="0.7">Exemplo · mesmo casal</text>
-  <text x="60" y="560" fill="#f5f5f0" font-size="48" font-family="Georgia, serif">Linha contemporânea</text>
-  <text x="60" y="620" fill="#f5f5f0" font-size="24" font-family="Georgia, serif" opacity="0.85">Cena compartilhada de comparação</text>
-  <rect x="60" y="700" width="320" height="220" rx="4" fill="#f5f5f0" fill-opacity="0.12" stroke="#f5f5f0" stroke-opacity="0.35"/>
-  <circle cx="170" cy="800" r="42" fill="#f5f5f0" fill-opacity="0.25"/>
-  <circle cx="250" cy="800" r="42" fill="#f5f5f0" fill-opacity="0.2"/>
+  <g fill="none" stroke="#c45c72" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+    <path d="M210 760c0-40 32-72 72-72s72 32 72 72"/>
+    <circle cx="250" cy="700" r="38"/>
+    <circle cx="314" cy="700" r="38"/>
+    <path d="M268 692c0-7 5-12 12-12 4 0 8 2 10 5 2-3 6-5 10-5 7 0 12 5 12 12 0 15-22 28-22 28S268 707 268 692z"/>
+    <path d="M140 180c18-6 28 10 18 22"/>
+    <path d="M720 200c-20 8-18 28 2 30"/>
+    <path d="M780 480c16 12 4 28-10 24"/>
+  </g>
+  <g fill="#e88a9a" fill-opacity="0.55">
+    <path d="M120 140c0-12 10-22 22-22 8 0 15 4 19 10 4-6 11-10 19-10 12 0 22 10 22 22 0 28-41 52-41 52S120 168 120 140z"/>
+    <path d="M760 140c0-10 8-18 18-18 6 0 12 3 15 8 3-5 9-8 15-8 10 0 18 8 18 18 0 22-33 42-33 42s-33-20-33-42z"/>
+  </g>
+  <text x="60" y="90" fill="#5c3d46" font-size="22" font-family="Georgia, serif" opacity="0.7">Exemplo · mesmo casal</text>
+  <text x="60" y="560" fill="#fff5f7" font-size="48" font-family="Georgia, serif">Linha contemporânea</text>
+  <text x="60" y="620" fill="#fff5f7" font-size="24" font-family="Georgia, serif" opacity="0.85">Contornos limpos, doodles fofos</text>
 </svg>
